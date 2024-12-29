@@ -19,10 +19,11 @@ uniform sampler2D specularTexture;
 
 //components
 vec3 ambient;
-float ambientStrength = 0.1f;
+float ambientStrength = 0.05f;
 vec3 diffuse;
 vec3 specular;
-float specularStrength = 0.25f;
+float specularStrength = 0.1f;
+float lightIntensity = 0.05f;
 
 void computeDirLight()
 {
@@ -40,12 +41,12 @@ void computeDirLight()
     ambient = ambientStrength * lightColor;
 
     //compute diffuse light
-    diffuse = max(dot(normalEye, lightDirN), 0.0f) * lightColor;
+    diffuse = max(dot(normalEye, lightDirN), 0.0f) * lightColor * lightIntensity;
 
     //compute specular light
     vec3 reflectDir = reflect(-lightDirN, normalEye);
     float specCoeff = pow(max(dot(viewDir, reflectDir), 0.0f), 32);
-    specular = specularStrength * specCoeff * lightColor;
+    specular = specularStrength * specCoeff * lightColor * lightIntensity;
 }
 
 void main() 
