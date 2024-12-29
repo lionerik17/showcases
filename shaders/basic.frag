@@ -19,11 +19,11 @@ uniform sampler2D specularTexture;
 
 //components
 vec3 ambient;
-float ambientStrength = 0.05f;
+float ambientStrength = 0.1f;
 vec3 diffuse;
 vec3 specular;
 float specularStrength = 0.1f;
-float lightIntensity = 0.05f;
+float lightIntensity = 0.1f;
 
 void computeDirLight()
 {

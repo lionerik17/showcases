@@ -49,6 +49,10 @@ gps::Camera myCamera(
 	glm::vec3(0.0f, 1.0f, 0.0f));
 
 GLfloat cameraSpeed = 0.75f;
+GLfloat airplaneOrbitAngle = 0.0f; // Airplane's current angle along the orbit
+glm::vec3 orbitCenter = glm::vec3(0.0f, 50.0f, 0.0f); // Center of the circular path
+float orbitRadius = 100.0f; // Radius of the circular path
+
 
 GLboolean pressedKeys[1024];
 
@@ -94,6 +98,9 @@ GLenum glCheckError_(const char* file, int line)
 void windowResizeCallback(GLFWwindow* window, int width, int height) {
 	fprintf(stdout, "Window resized! New width: %d , and height: %d\n", width, height);
 	// Update the OpenGL viewport to match the new window dimensions
+	if (width == 0 || height == 0) {
+		return;
+	}
 	glViewport(0, 0, width, height);
 
 	// Recalculate the projection matrix based on the new aspect ratio
@@ -251,7 +258,7 @@ void initUniforms() {
 	//model = glm::rotate(model, glm::radians(angle), glm::vec3(0.0f, 1.0f, 0.0f));
 	airportModelLoc = glGetUniformLocation(myBasicShader.shaderProgram, "model");
 
-	airplaneModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(100.0f, 70.5f, 70.0f));
+	airplaneModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(100.0f, 75.0f, 70.0f));
 	airplaneModelMatrix = glm::rotate(airplaneModelMatrix, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 	airplaneModelMatrix = glm::rotate(airplaneModelMatrix, glm::radians(-13.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 	airplaneModelMatrix = glm::scale(airplaneModelMatrix, glm::vec3(2.0f, 2.0f, 2.0f));
@@ -308,6 +315,26 @@ void renderAirport(gps::Shader shader) {
 
 void renderAirplane(gps::Shader shader) {
 	shader.useShaderProgram();
+
+	airplaneOrbitAngle -= 0.5f;
+	if (airplaneOrbitAngle < 0.0f) {
+		airplaneOrbitAngle += 360.0f;
+	}
+
+	glm::vec3 airplanePosition = orbitCenter + glm::vec3(
+		orbitRadius * cos(glm::radians(airplaneOrbitAngle)), 
+		0.0f,                                               
+		orbitRadius * sin(glm::radians(airplaneOrbitAngle))
+	);
+
+	glm::vec3 toCenter = glm::normalize(orbitCenter - airplanePosition);
+
+	float yaw = glm::degrees(atan2(toCenter.z, toCenter.x));
+
+	airplaneModelMatrix = glm::translate(glm::mat4(1.0f), airplanePosition);
+	airplaneModelMatrix = glm::rotate(airplaneModelMatrix, glm::radians(-yaw + 90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	airplaneModelMatrix = glm::rotate(airplaneModelMatrix, glm::radians(45.0f), glm::vec3(1.0f, 0.0f, 0.0f));    
+	airplaneModelMatrix = glm::scale(airplaneModelMatrix, glm::vec3(2.0f, 2.0f, 2.0f));
 
 	glUniformMatrix4fv(airplaneModelLoc, 1, GL_FALSE, glm::value_ptr(airplaneModelMatrix));
 
