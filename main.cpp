@@ -145,10 +145,9 @@ void mouseCallback(GLFWwindow* window, double xpos, double ypos) {
 	//TODO
 }
 
-void updateFog(float currentTime) {
-	float fogCycle = sin(currentTime * 0.5f) * 50.0f;
-	fogStart = 50.0f;
-	fogEnd = 800.0f;
+void updateFog() {
+	fogStart = 0.0f;
+	fogEnd = 1000.0f;
 
 	//fogColor = glm::vec3(
 	//	0.1f + 0.05f * sin(currentTime * 0.3f), // Red channel oscillates slightly
@@ -160,6 +159,14 @@ void updateFog(float currentTime) {
 	glUniform1f(fogEndLoc, fogEnd);
 
 	glUniform3fv(fogColorLoc, 1, glm::value_ptr(fogColor));
+}
+
+void updateLightFlicker(float currentTime) {
+	float flicker = 0.8f + 0.2f * sin(currentTime * 10.0f) + (rand() % 10) / 50.0f;
+
+	lightColor = glm::vec3(1.0f, 1.0f, 1.0f) * flicker;
+
+	glUniform3fv(lightColorLoc, 1, glm::value_ptr(lightColor));
 }
 
 void processMovement() {
@@ -340,7 +347,7 @@ void initUniforms() {
 	globalLightColorLoc = glGetUniformLocation(myBasicShader.shaderProgram, "globalLightColor");
 	glUniform3fv(globalLightColorLoc, 1, glm::value_ptr(globalLightColor));
 
-	lightPosition = glm::vec3(330.0f, 50.0f, 0.0f);
+	lightPosition = glm::vec3(330.0f, 60.0f, 5.0f);
 	lightPositionLoc = glGetUniformLocation(myBasicShader.shaderProgram, "lightPosition");
 	glUniform3fv(lightPositionLoc, 1, glm::value_ptr(lightPosition));
 
@@ -442,6 +449,7 @@ int main(int argc, const char* argv[]) {
 	initShaders();
 	initUniforms();
 	initSkyBox();
+	updateFog();
 	setWindowCallbacks();
 
 	glCheckError();
@@ -449,7 +457,7 @@ int main(int argc, const char* argv[]) {
 	while (!glfwWindowShouldClose(myWindow.getWindow())) {
 		currentTime = glfwGetTime();
 		processMovement();
-		updateFog(currentTime);
+		updateLightFlicker(currentTime);
 		renderScene();
 
 		glfwPollEvents();
