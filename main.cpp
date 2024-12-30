@@ -74,6 +74,13 @@ gps::Shader myBasicShader, skyboxShader;
 // skybox
 gps::SkyBox skyBox;
 
+// fog
+glm::vec3 fogColor = glm::vec3(0.1f, 0.1f, 0.2f);
+GLint fogColorLoc, fogStartLoc, fogEndLoc;
+float fogStart = 200.0f;
+float fogEnd = 500.0f;
+float currentTime = 0.0f;
+
 GLenum glCheckError_(const char* file, int line)
 {
 	GLenum errorCode;
@@ -136,6 +143,23 @@ void keyboardCallback(GLFWwindow* window, int key, int scancode, int action, int
 
 void mouseCallback(GLFWwindow* window, double xpos, double ypos) {
 	//TODO
+}
+
+void updateFog(float currentTime) {
+	float fogCycle = sin(currentTime * 0.5f) * 50.0f;
+	fogStart = 50.0f;
+	fogEnd = 800.0f;
+
+	//fogColor = glm::vec3(
+	//	0.1f + 0.05f * sin(currentTime * 0.3f), // Red channel oscillates slightly
+	//	0.1f + 0.05f * sin(currentTime * 0.4f), // Green channel oscillates slightly
+	//	0.2f + 0.05f * sin(currentTime * 0.5f)  // Blue channel oscillates slightly
+	//);
+
+	glUniform1f(fogStartLoc, fogStart);
+	glUniform1f(fogEndLoc, fogEnd);
+
+	glUniform3fv(fogColorLoc, 1, glm::value_ptr(fogColor));
 }
 
 void processMovement() {
@@ -301,6 +325,14 @@ void initUniforms() {
 	// send projection matrix to shader
 	glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
+	fogColorLoc = glGetUniformLocation(myBasicShader.shaderProgram, "fogColor");
+	fogStartLoc = glGetUniformLocation(myBasicShader.shaderProgram, "fogStart");
+	fogEndLoc = glGetUniformLocation(myBasicShader.shaderProgram, "fogEnd");
+
+	glUniform3fv(fogColorLoc, 1, glm::value_ptr(fogColor));
+	glUniform1f(fogStartLoc, fogStart);
+	glUniform1f(fogEndLoc, fogEnd);
+
 	// Directional light setup
 	
 	globalLightDirLoc = glGetUniformLocation(myBasicShader.shaderProgram, "globalLightDir");
@@ -415,7 +447,9 @@ int main(int argc, const char* argv[]) {
 	glCheckError();
 	// application loop
 	while (!glfwWindowShouldClose(myWindow.getWindow())) {
+		currentTime = glfwGetTime();
 		processMovement();
+		updateFog(currentTime);
 		renderScene();
 
 		glfwPollEvents();

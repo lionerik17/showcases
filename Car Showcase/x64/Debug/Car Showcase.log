@@ -1,2 +1,3 @@
 ﻿  main.cpp
-  Car Showcase.vcxproj -> D:\UTCN\an3\sem1\PG\Car Showcase\Car Showcase\x64\Debug\Car Showcase.exe
+D:\UTCN\an3\sem1\PG\lab\showcases\main.cpp(450,28): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+  Car Showcase.vcxproj -> D:\UTCN\an3\sem1\PG\lab\showcases\x64\Debug\Car Showcase.exe

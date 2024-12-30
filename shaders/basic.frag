@@ -25,6 +25,10 @@ vec3 specular;
 float specularStrength = 0.3f; // Dimmer specular highlight
 float shininess = 32.0f;
 
+uniform vec3 fogColor;        // Fog color
+uniform float fogStart;       // Start distance for fog
+uniform float fogEnd;         // End distance for fog
+
 // Attenuation factors for the point light
 float constant = 0.5f;
 float linear = 0.0025f;    
@@ -83,5 +87,9 @@ void main() {
     vec3 color = (ambient + diffuse) * texture(diffuseTexture, fTexCoords).rgb 
                  + specular * texture(specularTexture, fTexCoords).rgb;
 
-    fColor = vec4(color, 1.0);
+    // Fog calculation
+    float fogFactor = clamp((fogEnd - length(fragPosWorld)) / (fogEnd - fogStart), 0.0, 1.0);
+    vec3 foggedColor = mix(fogColor, color, fogFactor);
+
+    fColor = vec4(foggedColor, 1.0);
 }
