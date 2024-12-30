@@ -35,6 +35,12 @@ glm::vec3 lightPosition;
 glm::vec3 lightDir;
 glm::vec3 lightColor;
 
+// global light
+glm::vec3 globalLightDir = glm::vec3(-0.3f, -1.0f, -0.2f);
+glm::vec3 globalLightColor = glm::vec3(0.1f, 0.1f, 0.1f);
+GLuint globalLightDirLoc;
+GLuint globalLightColorLoc;
+
 // shader uniform locations
 GLint airportModelLoc, airplaneModelLoc, lamp1ModelLoc;
 GLint viewLoc;
@@ -294,6 +300,13 @@ void initUniforms() {
 	projectionLoc = glGetUniformLocation(myBasicShader.shaderProgram, "projection");
 	// send projection matrix to shader
 	glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
+
+	// Directional light setup
+	
+	globalLightDirLoc = glGetUniformLocation(myBasicShader.shaderProgram, "globalLightDir");
+	glUniform3fv(globalLightDirLoc, 1, glm::value_ptr(globalLightDir));
+	globalLightColorLoc = glGetUniformLocation(myBasicShader.shaderProgram, "globalLightColor");
+	glUniform3fv(globalLightColorLoc, 1, glm::value_ptr(globalLightColor));
 
 	lightPosition = glm::vec3(330.0f, 50.0f, 0.0f);
 	lightPositionLoc = glGetUniformLocation(myBasicShader.shaderProgram, "lightPosition");

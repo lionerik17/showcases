@@ -12,51 +12,72 @@ uniform mat4 view;            // View matrix
 uniform mat4 projection;      // Projection matrix
 uniform vec3 lightPosition;   // Lamp's position in world space
 uniform vec3 lightColor;      // Lamp's color
+uniform vec3 globalLightDir;     // Direction of the global light
+uniform vec3 globalLightColor;   // Color of the global light
 uniform sampler2D diffuseTexture;
 uniform sampler2D specularTexture;
 
 // Lighting parameters
 vec3 ambient;
-float ambientStrength = 0.5f;
+float ambientStrength = 0.2f; // Reduced ambient strength for the global light
 vec3 diffuse;
 vec3 specular;
-float specularStrength = 0.5f;
+float specularStrength = 0.3f; // Dimmer specular highlight
 float shininess = 32.0f;
 
-// Attenuation factors
-float constant = 1.0f;
-float linear = 0.0045f;    // You may need to adjust these values for your scene
-float quadratic = 0.0075f; // You may need to adjust these values for your scene
+// Attenuation factors for the point light
+float constant = 0.5f;
+float linear = 0.0025f;    
+float quadratic = 0.0025f; 
 
 void computePointLight(vec3 fragPosWorld, vec3 normalWorld) {
-    // Compute light direction in world space
     vec3 lightDir = normalize(lightPosition - fragPosWorld);
     float distance = length(lightPosition - fragPosWorld);
 
     // Calculate attenuation
     float attenuation = 1.0 / (constant + linear * distance + quadratic * (distance * distance));
 
-    // Compute ambient light
-    ambient = ambientStrength * lightColor * attenuation;
+    // Compute ambient light for the point light
+    ambient += 0.95 * lightColor * attenuation;
 
-    // Compute diffuse light
+    // Compute diffuse light for the point light
     float diff = max(dot(normalWorld, lightDir), 0.0);
-    diffuse = diff * lightColor * attenuation;
+    diffuse += 1.2 * diff * lightColor * attenuation;
 
-    // Compute specular light
-    vec3 viewDir = normalize(-fragPosWorld); // View direction is opposite of fragment position
+    // Compute specular light for the point light
+    vec3 viewDir = normalize(-fragPosWorld); 
     vec3 reflectDir = reflect(-lightDir, normalWorld);
     float spec = pow(max(dot(viewDir, reflectDir), 0.0), shininess);
-    specular = specularStrength * spec * lightColor * attenuation;
+    specular += specularStrength * spec * lightColor * attenuation;
+}
+
+void computeDirectionalLight(vec3 normalWorld) {
+    vec3 lightDir = normalize(-globalLightDir); // Directional light direction
+    ambient += ambientStrength * globalLightColor;
+
+    // Compute diffuse light for the global light
+    float diff = max(dot(normalWorld, lightDir), 0.0);
+    diffuse += 0.4 * diff * globalLightColor; // Reduce diffuse contribution for the global light
+
+    // Compute specular light for the global light
+    vec3 viewDir = normalize(-fPosition); // View direction
+    vec3 reflectDir = reflect(-lightDir, normalWorld);
+    float spec = pow(max(dot(viewDir, reflectDir), 0.0), shininess);
+    specular += 0.2 * specularStrength * spec * globalLightColor; // Reduce specular contribution
 }
 
 void main() {
-    // Transform fragment position and normal to world space
     vec3 fragPosWorld = vec3(model * vec4(fPosition, 1.0));
     vec3 normalWorld = normalize(mat3(transpose(inverse(model))) * fNormal);
 
+    // Initialize lighting components
+    ambient = vec3(0.0);
+    diffuse = vec3(0.0);
+    specular = vec3(0.0);
+
     // Compute lighting
     computePointLight(fragPosWorld, normalWorld);
+    computeDirectionalLight(normalWorld);
 
     // Combine texture colors with lighting
     vec3 color = (ambient + diffuse) * texture(diffuseTexture, fTexCoords).rgb 
