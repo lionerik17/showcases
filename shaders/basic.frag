@@ -1,60 +1,66 @@
 #version 410 core
 
-in vec3 fPosition;
-in vec3 fNormal;
-in vec2 fTexCoords;
+in vec3 fPosition;   // Vertex position in object space
+in vec3 fNormal;     // Vertex normal in object space
+in vec2 fTexCoords;  // Texture coordinates
 
 out vec4 fColor;
 
-//matrices
-uniform mat4 model;
-uniform mat4 view;
-uniform mat3 normalMatrix;
-//lighting
-uniform vec3 lightDir;
-uniform vec3 lightColor;
-// textures
+// Uniforms
+uniform mat4 model;           // Model matrix
+uniform mat4 view;            // View matrix
+uniform mat4 projection;      // Projection matrix
+uniform vec3 lightPosition;   // Lamp's position in world space
+uniform vec3 lightColor;      // Lamp's color
 uniform sampler2D diffuseTexture;
 uniform sampler2D specularTexture;
 
-//components
+// Lighting parameters
 vec3 ambient;
-float ambientStrength = 0.1f;
+float ambientStrength = 0.5f;
 vec3 diffuse;
 vec3 specular;
-float specularStrength = 0.1f;
-float lightIntensity = 0.1f;
+float specularStrength = 0.5f;
+float shininess = 32.0f;
 
-void computeDirLight()
-{
-    //compute eye space coordinates
-    vec4 fPosEye = view * model * vec4(fPosition, 1.0f);
-    vec3 normalEye = normalize(normalMatrix * fNormal);
+// Attenuation factors
+float constant = 1.0f;
+float linear = 0.0045f;    // You may need to adjust these values for your scene
+float quadratic = 0.0075f; // You may need to adjust these values for your scene
 
-    //normalize light direction
-    vec3 lightDirN = vec3(normalize(view * vec4(lightDir, 0.0f)));
+void computePointLight(vec3 fragPosWorld, vec3 normalWorld) {
+    // Compute light direction in world space
+    vec3 lightDir = normalize(lightPosition - fragPosWorld);
+    float distance = length(lightPosition - fragPosWorld);
 
-    //compute view direction (in eye coordinates, the viewer is situated at the origin
-    vec3 viewDir = normalize(- fPosEye.xyz);
+    // Calculate attenuation
+    float attenuation = 1.0 / (constant + linear * distance + quadratic * (distance * distance));
 
-    //compute ambient light
-    ambient = ambientStrength * lightColor;
+    // Compute ambient light
+    ambient = ambientStrength * lightColor * attenuation;
 
-    //compute diffuse light
-    diffuse = max(dot(normalEye, lightDirN), 0.0f) * lightColor * lightIntensity;
+    // Compute diffuse light
+    float diff = max(dot(normalWorld, lightDir), 0.0);
+    diffuse = diff * lightColor * attenuation;
 
-    //compute specular light
-    vec3 reflectDir = reflect(-lightDirN, normalEye);
-    float specCoeff = pow(max(dot(viewDir, reflectDir), 0.0f), 32);
-    specular = specularStrength * specCoeff * lightColor * lightIntensity;
+    // Compute specular light
+    vec3 viewDir = normalize(-fragPosWorld); // View direction is opposite of fragment position
+    vec3 reflectDir = reflect(-lightDir, normalWorld);
+    float spec = pow(max(dot(viewDir, reflectDir), 0.0), shininess);
+    specular = specularStrength * spec * lightColor * attenuation;
 }
 
-void main() 
-{
-    computeDirLight();
+void main() {
+    // Transform fragment position and normal to world space
+    vec3 fragPosWorld = vec3(model * vec4(fPosition, 1.0));
+    vec3 normalWorld = normalize(mat3(transpose(inverse(model))) * fNormal);
 
-    //compute final vertex color
-    vec3 color = min((ambient + diffuse) * texture(diffuseTexture, fTexCoords).rgb + specular * texture(specularTexture, fTexCoords).rgb, 1.0f);
+    // Compute lighting
+    computePointLight(fragPosWorld, normalWorld);
 
-    fColor = vec4(color, 1.0f);
+    // Combine texture colors with lighting
+    vec3 color = (ambient + diffuse) * texture(diffuseTexture, fTexCoords).rgb 
+                 + specular * texture(specularTexture, fTexCoords).rgb;
+
+    fColor = vec4(color, 1.0);
 }

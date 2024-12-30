@@ -25,20 +25,22 @@
 gps::Window myWindow;
 
 // matrices
-glm::mat4 airportModelMatrix, airplaneModelMatrix;
+glm::mat4 airportModelMatrix, airplaneModelMatrix, lamp1ModelMatrix;
 glm::mat4 view;
 glm::mat4 projection;
-glm::mat3 airportNormalMatrix, airplaneNormalMatrix;
+glm::mat3 airportNormalMatrix, airplaneNormalMatrix, lamp1NormalMatrix;
 
 // light parameters
+glm::vec3 lightPosition;
 glm::vec3 lightDir;
 glm::vec3 lightColor;
 
 // shader uniform locations
-GLint airportModelLoc, airplaneModelLoc;
+GLint airportModelLoc, airplaneModelLoc, lamp1ModelLoc;
 GLint viewLoc;
 GLint projectionLoc;
-GLint airportNormalMatrixLoc, airplaneNormalMatrixLoc;
+GLint airportNormalMatrixLoc, airplaneNormalMatrixLoc, lamp1NormalMatrixLoc;
+GLint lightPositionLoc;
 GLint lightDirLoc;
 GLint lightColorLoc;
 
@@ -57,8 +59,7 @@ float orbitRadius = 100.0f; // Radius of the circular path
 GLboolean pressedKeys[1024];
 
 // models
-gps::Model3D airport;
-gps::Model3D airplane;
+gps::Model3D airport, airplane, lamp1;
 GLfloat angle;
 
 // shaders
@@ -230,6 +231,7 @@ void initOpenGLState() {
 void initModels() {
 	airport.LoadModel("models/airport/airport.obj");
 	airplane.LoadModel("models/airplane/airplane.obj");
+	lamp1.LoadModel("models/lamp/StreetLamp.obj");
 }
 
 void initShaders() {
@@ -264,6 +266,11 @@ void initUniforms() {
 	airplaneModelMatrix = glm::scale(airplaneModelMatrix, glm::vec3(2.0f, 2.0f, 2.0f));
 	airplaneModelLoc = glGetUniformLocation(myBasicShader.shaderProgram, "model");
 
+	lamp1ModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(330.0f, 20.0f, 0.0f));
+	lamp1ModelMatrix = glm::rotate(lamp1ModelMatrix, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	lamp1ModelMatrix = glm::scale(lamp1ModelMatrix, glm::vec3(10.0f, 10.0f, 10.0f));
+	lamp1ModelLoc = glGetUniformLocation(myBasicShader.shaderProgram, "model");
+
 	// get view matrix for current camera
 	view = myCamera.getViewMatrix();
 	viewLoc = glGetUniformLocation(myBasicShader.shaderProgram, "view");
@@ -277,6 +284,8 @@ void initUniforms() {
 	airplaneNormalMatrix = glm::mat3(glm::inverseTranspose(view * airplaneModelMatrix));
 	airplaneNormalMatrixLoc = glGetUniformLocation(myBasicShader.shaderProgram, "normalMatrix");
 
+	lamp1NormalMatrix = glm::mat3(glm::inverseTranspose(view * lamp1ModelMatrix));
+	lamp1NormalMatrixLoc = glGetUniformLocation(myBasicShader.shaderProgram, "normalMatrix");
 
 	// create projection matrix
 	projection = glm::perspective(glm::radians(45.0f),
@@ -286,14 +295,18 @@ void initUniforms() {
 	// send projection matrix to shader
 	glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
+	lightPosition = glm::vec3(330.0f, 50.0f, 0.0f);
+	lightPositionLoc = glGetUniformLocation(myBasicShader.shaderProgram, "lightPosition");
+	glUniform3fv(lightPositionLoc, 1, glm::value_ptr(lightPosition));
+
 	//set the light direction (direction towards the light)
-	lightDir = glm::vec3(0.0f, 1.0f, 1.0f);
+	lightDir = glm::vec3(1.0f, 0.0f, 0.0f);
 	lightDirLoc = glGetUniformLocation(myBasicShader.shaderProgram, "lightDir");
 	// send light dir to shader
 	glUniform3fv(lightDirLoc, 1, glm::value_ptr(lightDir));
 
 	//set light color
-	lightColor = glm::vec3(0.5f, 0.5f, 0.5f); //white light
+	lightColor = glm::vec3(1.0f, 1.0f, 1.0f);
 	lightColorLoc = glGetUniformLocation(myBasicShader.shaderProgram, "lightColor");
 	// send light color to shader
 	glUniform3fv(lightColorLoc, 1, glm::value_ptr(lightColor));
@@ -343,6 +356,16 @@ void renderAirplane(gps::Shader shader) {
 	airplane.Draw(shader);
 }
 
+void renderLamp(gps::Shader shader) {
+	shader.useShaderProgram();
+
+	glUniformMatrix4fv(lamp1ModelLoc, 1, GL_FALSE, glm::value_ptr(lamp1ModelMatrix));
+
+	glUniformMatrix3fv(lamp1NormalMatrixLoc, 1, GL_FALSE, glm::value_ptr(lamp1NormalMatrix));
+
+	lamp1.Draw(shader);
+}
+
 void renderScene() {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -351,7 +374,7 @@ void renderScene() {
 	// render the airport
 	renderAirport(myBasicShader);
 	renderAirplane(myBasicShader);
-
+	renderLamp(myBasicShader);
 }
 
 void cleanup() {
