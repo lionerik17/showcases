@@ -23,6 +23,10 @@ namespace gps {
 
 		void Draw(gps::Shader shaderProgram);
 
+		void DrawPart(gps::Shader shaderProgram, const std::vector<int>& meshIds);
+
+		void DrawExcept(gps::Shader shaderProgram, const std::vector<int>& meshIds);
+
     private:
 		// Component meshes - group of objects
         std::vector<gps::Mesh> meshes;

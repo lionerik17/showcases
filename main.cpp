@@ -57,22 +57,25 @@ gps::Camera myCamera(
 	glm::vec3(0.0f, 1.0f, 0.0f));
 
 GLfloat cameraSpeed = 0.75f;
-GLfloat airplaneOrbitAngle = 0.0f; // Airplane's current angle along the orbit
 glm::vec3 orbitCenter = glm::vec3(0.0f, 50.0f, 0.0f); // Center of the circular path
+float airplaneOrbitAngle = 0.0f; // Airplane's current angle along the orbit
 float orbitRadius = 100.0f; // Radius of the circular path
-
 
 GLboolean pressedKeys[1024];
 
 // models
 gps::Model3D airport, airplane, lamp1;
-GLfloat angle;
 
 // shaders
 gps::Shader myBasicShader, skyboxShader;
 
 // skybox
 gps::SkyBox skyBox;
+
+// propeller
+glm::mat4 propellerModelMatrix;
+int propellerId = 27;
+float propellerRotationAngle = 0.0f;
 
 // fog
 glm::vec3 fogColor = glm::vec3(0.1f, 0.1f, 0.2f);
@@ -294,7 +297,6 @@ void initUniforms() {
 	myBasicShader.useShaderProgram();
 
 	airportModelMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(0.5f, 0.5f, 0.5f));
-	//model = glm::rotate(model, glm::radians(angle), glm::vec3(0.0f, 1.0f, 0.0f));
 	airportModelLoc = glGetUniformLocation(myBasicShader.shaderProgram, "model");
 
 	airplaneModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(100.0f, 75.0f, 70.0f));
@@ -402,10 +404,24 @@ void renderAirplane(gps::Shader shader) {
 	airplaneModelMatrix = glm::scale(airplaneModelMatrix, glm::vec3(2.0f, 2.0f, 2.0f));
 
 	glUniformMatrix4fv(airplaneModelLoc, 1, GL_FALSE, glm::value_ptr(airplaneModelMatrix));
-
 	glUniformMatrix3fv(airplaneNormalMatrixLoc, 1, GL_FALSE, glm::value_ptr(airplaneNormalMatrix));
 
-	airplane.Draw(shader);
+	airplane.DrawExcept(shader, { propellerId });
+
+	propellerRotationAngle += 90.0f;
+	if (propellerRotationAngle >= 360.0f) {
+		propellerRotationAngle -= 360.0f;
+	}
+
+	propellerModelMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(propellerRotationAngle), glm::vec3(1.0f, 0.0f, 0.0f));
+
+	glm::mat4 finalAirplaneModelMatrix = airplaneModelMatrix * propellerModelMatrix;
+	glm::mat3 finalAirplaneNormalMatrix = glm::inverseTranspose(view * finalAirplaneModelMatrix);
+
+	glUniformMatrix4fv(airplaneModelLoc, 1, GL_FALSE, glm::value_ptr(finalAirplaneModelMatrix));
+	glUniformMatrix3fv(airplaneNormalMatrixLoc, 1, GL_FALSE, glm::value_ptr(finalAirplaneNormalMatrix));
+
+	airplane.DrawPart(shader, { propellerId });
 }
 
 void renderLamp(gps::Shader shader) {

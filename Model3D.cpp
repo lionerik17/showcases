@@ -20,6 +20,21 @@ namespace gps {
 			meshes[i].Draw(shaderProgram);
 	}
 
+	void Model3D::DrawExcept(gps::Shader shaderProgram, const std::vector<int>& meshIds) {
+		for (int i = 0; i < meshes.size(); ++i) {
+			if (std::find(meshIds.begin(), meshIds.end(), i) != meshIds.end()) continue;
+			meshes[i].Draw(shaderProgram);
+		}
+	}
+
+	void Model3D::DrawPart(gps::Shader shaderProgram, const std::vector<int>& meshIds) {
+		for (int i : meshIds) {
+			if (i >= 0 && i < meshes.size()) {
+				meshes[i].Draw(shaderProgram);
+			}
+		}
+	}
+
 	// Does the parsing of the .obj file and fills in the data structure
 	void Model3D::ReadOBJ(std::string fileName, std::string basePath) {
 
@@ -48,7 +63,6 @@ namespace gps {
 
 		// Loop over shapes
 		for (size_t s = 0; s < shapes.size(); s++) {
-
 			std::vector<gps::Vertex> vertices;
 			std::vector<GLuint> indices;
 			std::vector<gps::Texture> textures;
