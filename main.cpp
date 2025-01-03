@@ -21,6 +21,15 @@
 #include <iostream>
 #include "SkyBox.hpp"
 
+enum RenderingMode {
+	SOLID,
+	WIREFRAME,
+	POINTS,
+	SMOOTH
+};
+
+RenderingMode currentRenderingMode = SOLID;
+
 // window
 gps::Window myWindow;
 
@@ -84,6 +93,19 @@ float fogStart = 200.0f;
 float fogEnd = 500.0f;
 float currentTime = 0.0f;
 
+// light parameters for the second light
+glm::vec3 light2Position;
+glm::vec3 light2Color;
+
+// Uniform locations for the second light
+GLint light2PositionLoc;
+GLint light2ColorLoc;
+glm::vec3 light2Direction;
+GLint light2DirectionLoc;
+
+bool canSwitchRenderMode = true;
+const float debounceDelay = 0.3f;
+
 GLenum glCheckError_(const char* file, int line)
 {
 	GLenum errorCode;
@@ -129,6 +151,36 @@ void windowResizeCallback(GLFWwindow* window, int width, int height) {
 	glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
 }
 
+void switchRenderMode(RenderingMode mode) {
+	currentRenderingMode = mode;
+
+	switch (mode) {
+	case SOLID:
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); // Solid mode
+		glDisable(GL_POLYGON_SMOOTH);
+		std::cout << "Switched to SOLID mode." << std::endl;
+		break;
+	case WIREFRAME:
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); // Wireframe mode
+		glDisable(GL_POLYGON_SMOOTH);
+		std::cout << "Switched to WIREFRAME mode." << std::endl;
+		break;
+	case POINTS:
+		glPolygonMode(GL_FRONT_AND_BACK, GL_POINT); // Points mode
+		glDisable(GL_POLYGON_SMOOTH);
+		glPointSize(5.0f); // Set point size
+		std::cout << "Switched to POINTS mode." << std::endl;
+		break;
+	case SMOOTH:
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); // Smooth Mode
+		glEnable(GL_POLYGON_SMOOTH);
+		glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST);
+		std::cout << "Switched to SMOOTH mode." << std::endl;
+		break;
+	}
+}
+
+
 void keyboardCallback(GLFWwindow* window, int key, int scancode, int action, int mode) {
 	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
 		glfwSetWindowShouldClose(window, GL_TRUE);
@@ -137,6 +189,22 @@ void keyboardCallback(GLFWwindow* window, int key, int scancode, int action, int
 	if (key >= 0 && key < 1024) {
 		if (action == GLFW_PRESS) {
 			pressedKeys[key] = true;
+
+			if (key == GLFW_KEY_1) {
+				switchRenderMode(SOLID);
+			}
+			else if (key == GLFW_KEY_2) {
+				switchRenderMode(WIREFRAME);
+			}
+			else if (key == GLFW_KEY_3) {
+				switchRenderMode(POINTS);
+			}
+			else if (key == GLFW_KEY_4) {
+				switchRenderMode(SMOOTH);
+			}
+
+			canSwitchRenderMode = false;
+			glfwSetTime(0);
 		}
 		else if (action == GLFW_RELEASE) {
 			pressedKeys[key] = false;
@@ -364,6 +432,20 @@ void initUniforms() {
 	lightColorLoc = glGetUniformLocation(myBasicShader.shaderProgram, "lightColor");
 	// send light color to shader
 	glUniform3fv(lightColorLoc, 1, glm::value_ptr(lightColor));
+
+	// Initialize second light position and color
+	light2Position = glm::vec3(-70.0f, 100.0f, 100.0f);
+	light2Color = glm::vec3(0.5f, 1.0f, 1.0f); // Example: blueish light
+	light2Direction = glm::vec3(0.0f, -1.0f, 0.0f);
+
+	// Get uniform locations for the second light
+	light2PositionLoc = glGetUniformLocation(myBasicShader.shaderProgram, "light2Position");
+	light2ColorLoc = glGetUniformLocation(myBasicShader.shaderProgram, "light2Color");
+	light2DirectionLoc = glGetUniformLocation(myBasicShader.shaderProgram, "light2Direction");
+
+	glUniform3fv(light2DirectionLoc, 1, glm::value_ptr(light2Direction));
+	glUniform3fv(light2PositionLoc, 1, glm::value_ptr(light2Position));
+	glUniform3fv(light2ColorLoc, 1, glm::value_ptr(light2Color));
 }
 
 void renderAirport(gps::Shader shader) {
@@ -422,6 +504,9 @@ void renderAirplane(gps::Shader shader) {
 	glUniformMatrix3fv(airplaneNormalMatrixLoc, 1, GL_FALSE, glm::value_ptr(finalAirplaneNormalMatrix));
 
 	airplane.DrawPart(shader, { propellerId });
+
+	light2Position = airplanePosition + glm::vec3(0.0f, -20.0f, 0.0f);
+	glUniform3fv(light2PositionLoc, 1, glm::value_ptr(light2Position));
 }
 
 void renderLamp(gps::Shader shader) {
@@ -472,6 +557,9 @@ int main(int argc, const char* argv[]) {
 	// application loop
 	while (!glfwWindowShouldClose(myWindow.getWindow())) {
 		currentTime = glfwGetTime();
+		if (!canSwitchRenderMode && currentTime > debounceDelay) {
+			canSwitchRenderMode = true;
+		}
 		processMovement();
 		updateLightFlicker(currentTime);
 		renderScene();

@@ -16,6 +16,9 @@ uniform vec3 globalLightDir;     // Direction of the global light
 uniform vec3 globalLightColor;   // Color of the global light
 uniform sampler2D diffuseTexture;
 uniform sampler2D specularTexture;
+uniform vec3 light2Position;   // Second lamp's position in world space
+uniform vec3 light2Color;      // Second lamp's color
+uniform vec3 light2Direction; // Direction of the second light
 
 // Lighting parameters
 vec3 ambient;
@@ -55,6 +58,34 @@ void computePointLight(vec3 fragPosWorld, vec3 normalWorld) {
     specular += specularStrength * spec * lightColor * attenuation;
 }
 
+void computePointLight2(vec3 fragPosWorld, vec3 normalWorld) {
+    vec3 lightDir = normalize(light2Position - fragPosWorld);
+    float distance = length(light2Position - fragPosWorld);
+
+    // Calculate attenuation
+    float attenuation = 1.0 / (constant + linear * distance + quadratic * (distance * distance));
+
+    // Compute directionality (tilt effect)
+    float theta = dot(normalize(-lightDir), normalize(light2Direction));
+    float directionFactor = max(theta, 0.0); // Ensure non-negative influence
+
+    // Combine attenuation and directionality
+    float effect = attenuation * directionFactor;
+
+    // Compute ambient light for the tilted point light
+    ambient += 0.8 * light2Color * effect;
+
+    // Compute diffuse light for the tilted point light
+    float diff = max(dot(normalWorld, lightDir), 0.0);
+    diffuse += diff * light2Color * effect;
+
+    // Compute specular light for the tilted point light
+    vec3 viewDir = normalize(-fragPosWorld);
+    vec3 reflectDir = reflect(-lightDir, normalWorld);
+    float spec = pow(max(dot(viewDir, reflectDir), 0.0), shininess);
+    specular += specularStrength * spec * light2Color * effect;
+}
+
 void computeDirectionalLight(vec3 normalWorld) {
     vec3 lightDir = normalize(-globalLightDir); // Directional light direction
     ambient += ambientStrength * globalLightColor;
@@ -81,6 +112,7 @@ void main() {
 
     // Compute lighting
     computePointLight(fragPosWorld, normalWorld);
+    computePointLight2(fragPosWorld, normalWorld);
     computeDirectionalLight(normalWorld);
 
     // Combine texture colors with lighting
