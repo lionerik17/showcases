@@ -3,6 +3,7 @@
 in vec3 fPosition;   // Vertex position in object space
 in vec3 fNormal;     // Vertex normal in object space
 in vec2 fTexCoords;  // Texture coordinates
+flat in vec3 fNormalFlat; // Flat shading normal
 
 out vec4 fColor;
 
@@ -19,6 +20,7 @@ uniform sampler2D specularTexture;
 uniform vec3 light2Position;   // Second lamp's position in world space
 uniform vec3 light2Color;      // Second lamp's color
 uniform vec3 light2Direction; // Direction of the second light
+uniform bool useFlatShading; // Toggle between flat and smooth shading
 
 // Lighting parameters
 vec3 ambient;
@@ -103,7 +105,7 @@ void computeDirectionalLight(vec3 normalWorld) {
 
 void main() {
     vec3 fragPosWorld = vec3(model * vec4(fPosition, 1.0));
-    vec3 normalWorld = normalize(mat3(transpose(inverse(model))) * fNormal);
+    vec3 normalWorld = useFlatShading ? normalize(fNormalFlat) : normalize(fNormal); // Select shading mode
 
     // Initialize lighting components
     ambient = vec3(0.0);

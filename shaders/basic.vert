@@ -7,15 +7,21 @@ layout(location=2) in vec2 vTexCoords;
 out vec3 fPosition;
 out vec3 fNormal;
 out vec2 fTexCoords;
+flat out vec3 fNormalFlat;
 
 uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
+uniform bool useFlatShading; // Toggle between flat and smooth shading
 
 void main() 
 {
 	gl_Position = projection * view * model * vec4(vPosition, 1.0f);
 	fPosition = vPosition;
-	fNormal = vNormal;
+    if (useFlatShading) {
+        fNormalFlat = mat3(transpose(inverse(model))) * vNormal; // Flat shading
+    } else {
+        fNormal = mat3(transpose(inverse(model))) * vNormal; // Smooth shading
+    }
 	fTexCoords = vTexCoords;
 }

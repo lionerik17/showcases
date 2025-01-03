@@ -153,26 +153,31 @@ void windowResizeCallback(GLFWwindow* window, int width, int height) {
 
 void switchRenderMode(RenderingMode mode) {
 	currentRenderingMode = mode;
+	GLint useFlatShadingLoc = glGetUniformLocation(myBasicShader.shaderProgram, "useFlatShading");
 
 	switch (mode) {
 	case SOLID:
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); // Solid mode
+		glUniform1i(useFlatShadingLoc, GL_TRUE);
 		glDisable(GL_POLYGON_SMOOTH);
 		std::cout << "Switched to SOLID mode." << std::endl;
 		break;
 	case WIREFRAME:
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); // Wireframe mode
+		glUniform1i(useFlatShadingLoc, GL_FALSE);
 		glDisable(GL_POLYGON_SMOOTH);
 		std::cout << "Switched to WIREFRAME mode." << std::endl;
 		break;
 	case POINTS:
 		glPolygonMode(GL_FRONT_AND_BACK, GL_POINT); // Points mode
+		glUniform1i(useFlatShadingLoc, GL_FALSE);
 		glDisable(GL_POLYGON_SMOOTH);
 		glPointSize(5.0f); // Set point size
 		std::cout << "Switched to POINTS mode." << std::endl;
 		break;
 	case SMOOTH:
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); // Smooth Mode
+		glUniform1i(useFlatShadingLoc, GL_FALSE);
 		glEnable(GL_POLYGON_SMOOTH);
 		glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST);
 		std::cout << "Switched to SMOOTH mode." << std::endl;
