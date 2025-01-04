@@ -1,3 +1,5 @@
-﻿  main.cpp
-D:\UTCN\an3\sem1\PG\lab\showcases\main.cpp(564,28): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+﻿  SkyBox.cpp
+  main.cpp
+D:\UTCN\an3\sem1\PG\lab\showcases\main.cpp(602,28): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+  Generating Code...
   Car Showcase.vcxproj -> D:\UTCN\an3\sem1\PG\lab\showcases\x64\Debug\Car Showcase.exe

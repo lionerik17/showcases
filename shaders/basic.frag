@@ -21,10 +21,11 @@ uniform vec3 light2Position;   // Second lamp's position in world space
 uniform vec3 light2Color;      // Second lamp's color
 uniform vec3 light2Direction; // Direction of the second light
 uniform bool useFlatShading; // Toggle between flat and smooth shading
+uniform bool isDay;
 
 // Lighting parameters
 vec3 ambient;
-float ambientStrength = 0.2f; // Reduced ambient strength for the global light
+uniform float ambientStrength = 0.15f; // Reduced ambient strength for the global light
 vec3 diffuse;
 vec3 specular;
 float specularStrength = 0.3f; // Dimmer specular highlight
@@ -105,25 +106,34 @@ void computeDirectionalLight(vec3 normalWorld) {
 
 void main() {
     vec3 fragPosWorld = vec3(model * vec4(fPosition, 1.0));
-    vec3 normalWorld = useFlatShading ? normalize(fNormalFlat) : normalize(fNormal); // Select shading mode
+    vec3 normalWorld = useFlatShading ? normalize(fNormalFlat) : normalize(fNormal);
 
     // Initialize lighting components
     ambient = vec3(0.0);
     diffuse = vec3(0.0);
     specular = vec3(0.0);
 
-    // Compute lighting
-    computePointLight(fragPosWorld, normalWorld);
-    computePointLight2(fragPosWorld, normalWorld);
-    computeDirectionalLight(normalWorld);
+    if (!isDay) {
+        // Compute lighting only at night
+        computePointLight(fragPosWorld, normalWorld);
+        computePointLight2(fragPosWorld, normalWorld);
+        computeDirectionalLight(normalWorld);
+    } else {
+        // Daytime: Only ambient light
+        ambient = ambientStrength * globalLightColor;
+    }
 
     // Combine texture colors with lighting
     vec3 color = (ambient + diffuse) * texture(diffuseTexture, fTexCoords).rgb 
                  + specular * texture(specularTexture, fTexCoords).rgb;
 
     // Fog calculation
-    float fogFactor = clamp((fogEnd - length(fragPosWorld)) / (fogEnd - fogStart), 0.0, 1.0);
-    vec3 foggedColor = mix(fogColor, color, fogFactor);
-
-    fColor = vec4(foggedColor, 1.0);
+    if (!isDay) {
+        float fogFactor = clamp((fogEnd - length(fragPosWorld)) / (fogEnd - fogStart), 0.0, 1.0);
+        vec3 foggedColor = mix(fogColor, color, fogFactor);
+        fColor = vec4(foggedColor, 1.0);
+    } else {
+        // No fog during the day
+        fColor = vec4(color, 1.0);
+    }
 }

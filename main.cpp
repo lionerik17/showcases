@@ -105,6 +105,33 @@ GLint light2DirectionLoc;
 
 bool canSwitchRenderMode = true;
 const float debounceDelay = 0.3f;
+bool isDay = false;
+
+void initSkyBox(bool isDay) {
+	std::vector<const GLchar*> faces;
+
+	if (!isDay) {
+		// Night skybox
+		faces.push_back("skybox/posx.png"); // right
+		faces.push_back("skybox/negx.png"); // left
+		faces.push_back("skybox/posy.png"); // top
+		faces.push_back("skybox/negy.png"); // bottom
+		faces.push_back("skybox/posz.png"); // front
+		faces.push_back("skybox/negz.png"); // back
+	}
+	else {
+		// Day skybox
+		faces.push_back("skybox/px.png"); // right
+		faces.push_back("skybox/nx.png"); // left
+		faces.push_back("skybox/py.png"); // top
+		faces.push_back("skybox/ny.png"); // bottom
+		faces.push_back("skybox/pz.png"); // front
+		faces.push_back("skybox/nz.png"); // back
+	}
+
+	// Load the skybox with the selected faces
+	skyBox.Load(faces);
+}
 
 GLenum glCheckError_(const char* file, int line)
 {
@@ -185,7 +212,6 @@ void switchRenderMode(RenderingMode mode) {
 	}
 }
 
-
 void keyboardCallback(GLFWwindow* window, int key, int scancode, int action, int mode) {
 	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
 		glfwSetWindowShouldClose(window, GL_TRUE);
@@ -208,6 +234,46 @@ void keyboardCallback(GLFWwindow* window, int key, int scancode, int action, int
 				switchRenderMode(SMOOTH);
 			}
 
+			if (key == GLFW_KEY_N) { // N key for toggle
+				isDay = !isDay;
+				float ambientStrength;
+				// Update fog and light uniforms based on the new state
+				if (isDay) {
+					// Daytime: Disable fog and lights
+					fogStart = 1000.0f;
+					fogEnd = 2000.0f;
+					fogColor = glm::vec3(1.0f, 1.0f, 1.0f); // No visible fog during the day
+
+					lightColor = glm::vec3(0.0f);
+					light2Color = glm::vec3(0.0f);
+					ambientStrength = 0.85f; // Brighter ambient light during the day
+				}
+				else {
+					// Nighttime: Enable fog and lights
+					fogStart = 0.0f;
+					fogEnd = 1000.0f;
+					fogColor = glm::vec3(0.1f, 0.1f, 0.2f);
+
+					lightColor = glm::vec3(1.0f, 1.0f, 1.0f); // Full light intensity at night
+					light2Color = glm::vec3(0.5f, 1.0f, 1.0f); // Example light2 color
+					ambientStrength = 0.15f; // Brighter ambient light during the day
+				}
+
+				// Send updated uniforms to the shaders
+				myBasicShader.useShaderProgram();
+				GLint isDayLoc = glGetUniformLocation(myBasicShader.shaderProgram, "isDay");
+				glUniform1i(isDayLoc, isDay);
+				initSkyBox(isDay);
+				glUniform3fv(fogColorLoc, 1, glm::value_ptr(fogColor));
+				glUniform1f(fogStartLoc, fogStart);
+				glUniform1f(fogEndLoc, fogEnd);
+				glUniform3fv(lightColorLoc, 1, glm::value_ptr(lightColor));
+				glUniform3fv(light2ColorLoc, 1, glm::value_ptr(light2Color));
+				glUniform1f(glGetUniformLocation(myBasicShader.shaderProgram, "ambientStrength"), ambientStrength);
+
+				std::cout << (isDay ? "Day mode activated." : "Night mode activated.") << std::endl;
+			}
+
 			canSwitchRenderMode = false;
 			glfwSetTime(0);
 		}
@@ -219,22 +285,6 @@ void keyboardCallback(GLFWwindow* window, int key, int scancode, int action, int
 
 void mouseCallback(GLFWwindow* window, double xpos, double ypos) {
 	//TODO
-}
-
-void updateFog() {
-	fogStart = 0.0f;
-	fogEnd = 1000.0f;
-
-	//fogColor = glm::vec3(
-	//	0.1f + 0.05f * sin(currentTime * 0.3f), // Red channel oscillates slightly
-	//	0.1f + 0.05f * sin(currentTime * 0.4f), // Green channel oscillates slightly
-	//	0.2f + 0.05f * sin(currentTime * 0.5f)  // Blue channel oscillates slightly
-	//);
-
-	glUniform1f(fogStartLoc, fogStart);
-	glUniform1f(fogEndLoc, fogEnd);
-
-	glUniform3fv(fogColorLoc, 1, glm::value_ptr(fogColor));
 }
 
 void updateLightFlicker(float currentTime) {
@@ -353,17 +403,6 @@ void initShaders() {
 		"shaders/basic.frag");
 	skyboxShader.loadShader("shaders/skyboxShader.vert", "shaders/skyboxShader.frag");
 	skyboxShader.useShaderProgram();
-}
-
-void initSkyBox() {
-	std::vector<const GLchar*> faces;
-	faces.push_back("skybox/posx.png"); // right
-	faces.push_back("skybox/negx.png"); // left
-	faces.push_back("skybox/posy.png"); // top
-	faces.push_back("skybox/negy.png"); // bottom
-	faces.push_back("skybox/negz.png"); // back
-	faces.push_back("skybox/posz.png"); // front
-	skyBox.Load(faces);
 }
 
 void initUniforms() {
@@ -554,8 +593,7 @@ int main(int argc, const char* argv[]) {
 	initModels();
 	initShaders();
 	initUniforms();
-	initSkyBox();
-	updateFog();
+	initSkyBox(false);
 	setWindowCallbacks();
 
 	glCheckError();
