@@ -12,7 +12,7 @@ flat out vec3 fNormalFlat;
 uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
-uniform bool useFlatShading; // Toggle between flat and smooth shading
+uniform bool useFlatShading;
 
 void main() 
 {

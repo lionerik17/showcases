@@ -89,8 +89,8 @@ float propellerRotationAngle = 0.0f;
 // fog
 glm::vec3 fogColor = glm::vec3(0.1f, 0.1f, 0.2f);
 GLint fogColorLoc, fogStartLoc, fogEndLoc;
-float fogStart = 200.0f;
-float fogEnd = 500.0f;
+float fogStart = 0.0f;
+float fogEnd = 1000.0f;
 float currentTime = 0.0f;
 
 // light parameters for the second light
@@ -129,7 +129,6 @@ void initSkyBox(bool isDay) {
 		faces.push_back("skybox/nz.png"); // back
 	}
 
-	// Load the skybox with the selected faces
 	skyBox.Load(faces);
 }
 
@@ -163,17 +162,14 @@ GLenum glCheckError_(const char* file, int line)
 
 void windowResizeCallback(GLFWwindow* window, int width, int height) {
 	fprintf(stdout, "Window resized! New width: %d , and height: %d\n", width, height);
-	// Update the OpenGL viewport to match the new window dimensions
 	if (width == 0 || height == 0) {
 		return;
 	}
 	glViewport(0, 0, width, height);
 
-	// Recalculate the projection matrix based on the new aspect ratio
 	float aspectRatio = static_cast<float>(width) / static_cast<float>(height);
 	projection = glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 1000.0f);
 
-	// Update the projection matrix uniform in the shader
 	myBasicShader.useShaderProgram();
 	glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
 }
@@ -234,19 +230,18 @@ void keyboardCallback(GLFWwindow* window, int key, int scancode, int action, int
 				switchRenderMode(SMOOTH);
 			}
 
-			if (key == GLFW_KEY_N) { // N key for toggle
+			if (key == GLFW_KEY_N) {
 				isDay = !isDay;
 				float ambientStrength;
-				// Update fog and light uniforms based on the new state
 				if (isDay) {
 					// Daytime: Disable fog and lights
 					fogStart = 1000.0f;
 					fogEnd = 2000.0f;
-					fogColor = glm::vec3(1.0f, 1.0f, 1.0f); // No visible fog during the day
+					fogColor = glm::vec3(1.0f, 1.0f, 1.0f);
 
 					lightColor = glm::vec3(0.0f);
 					light2Color = glm::vec3(0.0f);
-					ambientStrength = 0.85f; // Brighter ambient light during the day
+					ambientStrength = 0.85f;
 				}
 				else {
 					// Nighttime: Enable fog and lights
@@ -254,12 +249,11 @@ void keyboardCallback(GLFWwindow* window, int key, int scancode, int action, int
 					fogEnd = 1000.0f;
 					fogColor = glm::vec3(0.1f, 0.1f, 0.2f);
 
-					lightColor = glm::vec3(1.0f, 1.0f, 1.0f); // Full light intensity at night
-					light2Color = glm::vec3(0.5f, 1.0f, 1.0f); // Example light2 color
-					ambientStrength = 0.15f; // Brighter ambient light during the day
+					lightColor = glm::vec3(1.0f, 1.0f, 1.0f);
+					light2Color = glm::vec3(0.5f, 1.0f, 1.0f);
+					ambientStrength = 0.15f;
 				}
 
-				// Send updated uniforms to the shaders
 				myBasicShader.useShaderProgram();
 				GLint isDayLoc = glGetUniformLocation(myBasicShader.shaderProgram, "isDay");
 				glUniform1i(isDayLoc, isDay);
@@ -549,7 +543,7 @@ void renderAirplane(gps::Shader shader) {
 
 	airplane.DrawPart(shader, { propellerId });
 
-	light2Position = airplanePosition + glm::vec3(0.0f, -20.0f, 0.0f);
+	light2Position = airplanePosition + glm::vec3(0.0f, -25.0f, -5.0f);
 	glUniform3fv(light2PositionLoc, 1, glm::value_ptr(light2Position));
 }
 

@@ -8,19 +8,19 @@ flat in vec3 fNormalFlat; // Flat shading normal
 out vec4 fColor;
 
 // Uniforms
-uniform mat4 model;           // Model matrix
-uniform mat4 view;            // View matrix
-uniform mat4 projection;      // Projection matrix
-uniform vec3 lightPosition;   // Lamp's position in world space
-uniform vec3 lightColor;      // Lamp's color
-uniform vec3 globalLightDir;     // Direction of the global light
-uniform vec3 globalLightColor;   // Color of the global light
+uniform mat4 model;           
+uniform mat4 view;            
+uniform mat4 projection;      
+uniform vec3 lightPosition;   
+uniform vec3 lightColor;      
+uniform vec3 globalLightDir;     
+uniform vec3 globalLightColor;   
 uniform sampler2D diffuseTexture;
 uniform sampler2D specularTexture;
-uniform vec3 light2Position;   // Second lamp's position in world space
-uniform vec3 light2Color;      // Second lamp's color
-uniform vec3 light2Direction; // Direction of the second light
-uniform bool useFlatShading; // Toggle between flat and smooth shading
+uniform vec3 light2Position;   
+uniform vec3 light2Color;      
+uniform vec3 light2Direction; 
+uniform bool useFlatShading; 
 uniform bool isDay;
 
 // Lighting parameters
@@ -28,7 +28,7 @@ vec3 ambient;
 uniform float ambientStrength = 0.15f; // Reduced ambient strength for the global light
 vec3 diffuse;
 vec3 specular;
-float specularStrength = 0.3f; // Dimmer specular highlight
+float specularStrength = 0.7f; // Dimmer specular highlight
 float shininess = 32.0f;
 
 uniform vec3 fogColor;        // Fog color
