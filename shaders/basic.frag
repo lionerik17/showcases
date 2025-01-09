@@ -4,6 +4,7 @@ in vec3 fPosition;   // Vertex position in object space
 in vec3 fNormal;     // Vertex normal in object space
 in vec2 fTexCoords;  // Texture coordinates
 flat in vec3 fNormalFlat; // Flat shading normal
+in vec4 fragPosLightSpace;
 
 out vec4 fColor;
 
@@ -22,6 +23,7 @@ uniform vec3 light2Color;
 uniform vec3 light2Direction; 
 uniform bool useFlatShading; 
 uniform bool isDay;
+uniform sampler2D shadowMap;
 
 // Lighting parameters
 vec3 ambient;
@@ -38,7 +40,29 @@ uniform float fogEnd;         // End distance for fog
 // Attenuation factors for the point light
 float constant = 0.5f;
 float linear = 0.0025f;    
-float quadratic = 0.0025f; 
+float quadratic = 0.0025f;
+
+float computeShadow() {
+	// perform perspective divide 
+	vec3 normalizedCoords = fragPosLightSpace.xyz / fragPosLightSpace.w; 
+
+	// Transform to [0,1] range 
+	normalizedCoords = normalizedCoords * 0.5 + 0.5; 
+
+	// Get closest depth value from light's perspective 
+	float closestDepth = texture(shadowMap, normalizedCoords.xy).r; 
+
+	// Get depth of current fragment from light's perspective 
+	if (normalizedCoords.z > 1.0f) 
+		return 0.0f; 
+	float currentDepth = normalizedCoords.z; 
+
+	// Check whether current frag pos is in shadow 
+	float bias = 0.005f; 
+	float shadow = currentDepth - bias > closestDepth  ? 1.0f : 0.0f; 
+
+	return shadow;
+}
 
 void computePointLight(vec3 fragPosWorld, vec3 normalWorld) {
     vec3 lightDir = normalize(lightPosition - fragPosWorld);
@@ -107,6 +131,7 @@ void computeDirectionalLight(vec3 normalWorld) {
 void main() {
     vec3 fragPosWorld = vec3(model * vec4(fPosition, 1.0));
     vec3 normalWorld = useFlatShading ? normalize(fNormalFlat) : normalize(fNormal);
+    float shadow = computeShadow();
 
     // Initialize lighting components
     ambient = vec3(0.0);
@@ -118,6 +143,8 @@ void main() {
         computePointLight(fragPosWorld, normalWorld);
         computePointLight2(fragPosWorld, normalWorld);
         computeDirectionalLight(normalWorld);
+        diffuse *= (1.0 - shadow); // Dim diffuse light in shadows
+        specular *= (1.0 - shadow); // Dim specular light in shadows
     } else {
         // Daytime: Only ambient light
         ambient = ambientStrength * globalLightColor;

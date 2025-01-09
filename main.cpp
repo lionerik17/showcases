@@ -29,6 +29,7 @@ enum RenderingMode {
 };
 
 RenderingMode currentRenderingMode = SOLID;
+float globalLightMoveSpeed = 0.75f; // Speed of global light movement
 
 // window
 gps::Window myWindow;
@@ -45,8 +46,8 @@ glm::vec3 lightDir;
 glm::vec3 lightColor;
 
 // global light
-glm::vec3 globalLightDir = glm::vec3(-0.3f, -1.0f, -0.2f);
-glm::vec3 globalLightColor = glm::vec3(0.1f, 0.1f, 0.1f);
+glm::vec3 globalLightDir = glm::vec3(0.0f, 25.0f, 0.0f);
+glm::vec3 globalLightColor = glm::vec3(0.3f, 0.3f, 0.3f);
 GLuint globalLightDirLoc;
 GLuint globalLightColorLoc;
 
@@ -106,6 +107,61 @@ GLint light2DirectionLoc;
 bool canSwitchRenderMode = true;
 const float debounceDelay = 0.3f;
 bool isDay = false;
+
+float angleY = 0.0f;
+GLfloat lightAngle;
+gps::Model3D lightCube;
+gps::Model3D screenQuad;
+
+gps::Shader lightShader;
+gps::Shader screenQuadShader;
+gps::Shader depthMapShader;
+GLuint shadowMapFBO;
+GLuint depthMapTexture;
+glm::mat4 lightRotation;
+const unsigned int SHADOW_WIDTH = 2048;
+const unsigned int SHADOW_HEIGHT = 2048;
+bool showDepthMap;
+
+void initFBO() {
+	//TODO - Create the FBO, the depth texture and attach the depth texture to the FBO
+	glGenFramebuffers(1, &shadowMapFBO);
+
+	//create depth texture for FBO 
+	glGenTextures(1, &depthMapTexture);
+	glBindTexture(GL_TEXTURE_2D, depthMapTexture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	float borderColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+	glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+
+	//attach texture to FBO 
+	glBindFramebuffer(GL_FRAMEBUFFER, shadowMapFBO);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMapTexture, 0);
+	glDrawBuffer(GL_NONE);
+	glReadBuffer(GL_NONE);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+glm::mat4 computeLightSpaceTrMatrix() {
+	// Define light position based on the direction
+	glm::vec3 lightPos = -glm::normalize(globalLightDir) * 10.0f;
+
+	// Compute the light view matrix with a fixed up vector
+	glm::mat4 lightView = glm::lookAt(lightPos, glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f)); // Fixed up vector (Y-axis)
+
+	// Define orthographic bounds
+	const GLfloat near_plane = 1.0f, far_plane = 50.0f; // Adjust based on the scene
+	const GLfloat ortho_size = 50.0f; // Small area coverage for sharper shadows
+
+	glm::mat4 lightProjection = glm::ortho(-ortho_size, ortho_size, -ortho_size, ortho_size, near_plane, far_plane);
+
+	// Combine light projection and view matrices
+	return lightProjection * lightView;
+}
 
 void initSkyBox(bool isDay) {
 	std::vector<const GLchar*> faces;
@@ -172,6 +228,8 @@ void windowResizeCallback(GLFWwindow* window, int width, int height) {
 
 	myBasicShader.useShaderProgram();
 	glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
+	WindowDimensions newDimension = { width, height };
+	myWindow.setWindowDimensions(newDimension);
 }
 
 void switchRenderMode(RenderingMode mode) {
@@ -212,6 +270,9 @@ void keyboardCallback(GLFWwindow* window, int key, int scancode, int action, int
 	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
 		glfwSetWindowShouldClose(window, GL_TRUE);
 	}
+
+	if (key == GLFW_KEY_M && action == GLFW_PRESS)
+		showDepthMap = !showDepthMap;
 
 	if (key >= 0 && key < 1024) {
 		if (action == GLFW_PRESS) {
@@ -286,6 +347,7 @@ void updateLightFlicker(float currentTime) {
 
 	lightColor = glm::vec3(1.0f, 1.0f, 1.0f) * flicker;
 
+	myBasicShader.useShaderProgram();
 	glUniform3fv(lightColorLoc, 1, glm::value_ptr(lightColor));
 }
 
@@ -362,6 +424,30 @@ void processMovement() {
 		airportNormalMatrix = glm::mat3(glm::inverseTranspose(view * airportModelMatrix));
 	}
 
+	// Global light movement controls
+	if (pressedKeys[GLFW_KEY_I]) {
+		globalLightDir.z -= globalLightMoveSpeed; // Move light forward
+	}
+
+	if (pressedKeys[GLFW_KEY_K]) {
+		globalLightDir.z += globalLightMoveSpeed; // Move light backward
+	}
+
+	if (pressedKeys[GLFW_KEY_J]) {
+		globalLightDir.x -= globalLightMoveSpeed; // Move light left
+	}
+
+	if (pressedKeys[GLFW_KEY_L]) {
+		globalLightDir.x += globalLightMoveSpeed; // Move light right
+	}
+
+	if (pressedKeys[GLFW_KEY_U]) {
+		globalLightDir.y += globalLightMoveSpeed; // Move light up
+	}
+
+	if (pressedKeys[GLFW_KEY_O]) {
+		globalLightDir.y -= globalLightMoveSpeed; // Move light down
+	}
 }
 
 void initOpenGLWindow() {
@@ -389,6 +475,8 @@ void initModels() {
 	airport.LoadModel("models/airport/airport.obj");
 	airplane.LoadModel("models/airplane/airplane.obj");
 	lamp1.LoadModel("models/lamp/StreetLamp.obj");
+	lightCube.LoadModel("models/cube/cube.obj");
+	screenQuad.LoadModel("models/quad/quad.obj");
 }
 
 void initShaders() {
@@ -397,6 +485,9 @@ void initShaders() {
 		"shaders/basic.frag");
 	skyboxShader.loadShader("shaders/skyboxShader.vert", "shaders/skyboxShader.frag");
 	skyboxShader.useShaderProgram();
+	lightShader.loadShader("shaders/lightCube.vert", "shaders/lightCube.frag");
+	depthMapShader.loadShader("shaders/depthMap.vert", "shaders/depthMap.frag");
+	screenQuadShader.loadShader("shaders/screenQuad.vert", "shaders/screenQuad.frag");
 }
 
 void initUniforms() {
@@ -461,12 +552,13 @@ void initUniforms() {
 
 	//set the light direction (direction towards the light)
 	lightDir = glm::vec3(1.0f, 0.0f, 0.0f);
+	lightRotation = glm::rotate(glm::mat4(1.0f), glm::radians(lightAngle), glm::vec3(0.0f, 1.0f, 0.0f));
 	lightDirLoc = glGetUniformLocation(myBasicShader.shaderProgram, "lightDir");
 	// send light dir to shader
-	glUniform3fv(lightDirLoc, 1, glm::value_ptr(lightDir));
+	glUniform3fv(lightDirLoc, 1, glm::value_ptr(glm::inverseTranspose(glm::mat3(view * lightRotation)) * lightDir));
 
 	//set light color
-	lightColor = glm::vec3(1.0f, 1.0f, 1.0f);
+	lightColor = glm::vec3(0.0f, 0.0f, 0.0f);
 	lightColorLoc = glGetUniformLocation(myBasicShader.shaderProgram, "lightColor");
 	// send light color to shader
 	glUniform3fv(lightColorLoc, 1, glm::value_ptr(lightColor));
@@ -484,6 +576,156 @@ void initUniforms() {
 	glUniform3fv(light2DirectionLoc, 1, glm::value_ptr(light2Direction));
 	glUniform3fv(light2PositionLoc, 1, glm::value_ptr(light2Position));
 	glUniform3fv(light2ColorLoc, 1, glm::value_ptr(light2Color));
+
+	lightShader.useShaderProgram();
+	glUniformMatrix4fv(glGetUniformLocation(lightShader.shaderProgram, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
+}
+
+void drawObjects(gps::Shader shader, bool depthPass) {
+	//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	//render the scene
+	//skyBox.Draw(skyboxShader, view, projection);
+	shader.useShaderProgram();
+
+	glm::mat4 modelMatrix;
+	glm::mat3 normalMatrix;
+
+	// Render airport
+	modelMatrix = airportModelMatrix;
+	glUniformMatrix4fv(glGetUniformLocation(shader.shaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(modelMatrix));
+	if (!depthPass) {
+		normalMatrix = glm::mat3(glm::inverseTranspose(view * modelMatrix));
+		glUniformMatrix3fv(glGetUniformLocation(shader.shaderProgram, "normalMatrix"), 1, GL_FALSE, glm::value_ptr(normalMatrix));
+	}
+	airport.Draw(shader);
+
+	// Update airplane's orbit
+	airplaneOrbitAngle -= 0.5f;
+	if (airplaneOrbitAngle < 0.0f) {
+		airplaneOrbitAngle += 360.0f;
+	}
+
+	// Render airplane
+	glm::vec3 airplanePosition = orbitCenter + glm::vec3(
+		orbitRadius * cos(glm::radians(airplaneOrbitAngle)),
+		0.0f,
+		orbitRadius * sin(glm::radians(airplaneOrbitAngle))
+	);
+
+	glm::vec3 toCenter = glm::normalize(orbitCenter - airplanePosition);
+	float yaw = glm::degrees(atan2(toCenter.z, toCenter.x));
+
+	modelMatrix = glm::translate(glm::mat4(1.0f), airplanePosition);
+	modelMatrix = glm::rotate(modelMatrix, glm::radians(-yaw + 90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	modelMatrix = glm::rotate(modelMatrix, glm::radians(45.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+	modelMatrix = glm::scale(modelMatrix, glm::vec3(2.0f, 2.0f, 2.0f));
+
+	glUniformMatrix4fv(glGetUniformLocation(shader.shaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(modelMatrix));
+	if (!depthPass) {
+		normalMatrix = glm::mat3(glm::inverseTranspose(view * modelMatrix));
+		glUniformMatrix3fv(glGetUniformLocation(shader.shaderProgram, "normalMatrix"), 1, GL_FALSE, glm::value_ptr(normalMatrix));
+	}
+	airplane.DrawExcept(shader, { propellerId });
+
+	propellerRotationAngle += 90.0f;
+	if (propellerRotationAngle >= 360.0f) {
+		propellerRotationAngle -= 360.0f;
+	}
+
+	propellerModelMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(propellerRotationAngle), glm::vec3(1.0f, 0.0f, 0.0f));
+
+	/*glm::mat4 finalAirplaneModelMatrix = airplaneModelMatrix * propellerModelMatrix;
+	glm::mat3 finalAirplaneNormalMatrix = glm::inverseTranspose(view * finalAirplaneModelMatrix);
+
+	glUniformMatrix4fv(airplaneModelLoc, 1, GL_FALSE, glm::value_ptr(finalAirplaneModelMatrix));
+	glUniformMatrix3fv(airplaneNormalMatrixLoc, 1, GL_FALSE, glm::value_ptr(finalAirplaneNormalMatrix));*/
+
+	modelMatrix = modelMatrix * propellerModelMatrix;
+	glUniformMatrix4fv(glGetUniformLocation(shader.shaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(modelMatrix));
+	if (!depthPass) {
+		normalMatrix = glm::mat3(glm::inverseTranspose(view * modelMatrix));
+		glUniformMatrix3fv(glGetUniformLocation(shader.shaderProgram, "normalMatrix"), 1, GL_FALSE, glm::value_ptr(normalMatrix));
+	}
+	airplane.DrawPart(shader, { propellerId });
+
+	// Render lamp
+	modelMatrix = lamp1ModelMatrix;
+	glUniformMatrix4fv(glGetUniformLocation(shader.shaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(modelMatrix));
+	if (!depthPass) {
+		normalMatrix = glm::mat3(glm::inverseTranspose(view * modelMatrix));
+		glUniformMatrix3fv(glGetUniformLocation(shader.shaderProgram, "normalMatrix"), 1, GL_FALSE, glm::value_ptr(normalMatrix));
+
+		// Update light2 position relative to airplane
+		glm::vec3 light2Position = airplanePosition + glm::vec3(0.0f, -25.0f, -5.0f);
+		glUniform3fv(glGetUniformLocation(shader.shaderProgram, "light2Position"), 1, glm::value_ptr(light2Position));
+	}
+	lamp1.Draw(shader);
+}
+
+void renderSceneWithShadows() {
+	glm::mat4 lightSpaceTrMatrix = computeLightSpaceTrMatrix();
+
+	depthMapShader.useShaderProgram();
+	glUniformMatrix4fv(glGetUniformLocation(depthMapShader.shaderProgram, "lightSpaceTrMatrix"),
+		1,
+		GL_FALSE,
+		glm::value_ptr(lightSpaceTrMatrix));
+
+	glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
+	glBindFramebuffer(GL_FRAMEBUFFER, shadowMapFBO);
+	glClear(GL_DEPTH_BUFFER_BIT);
+
+	drawObjects(depthMapShader, true);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	if (showDepthMap) {
+		glViewport(0, 0, myWindow.getWindowDimensions().width, myWindow.getWindowDimensions().height);
+		glClear(GL_COLOR_BUFFER_BIT);
+		screenQuadShader.useShaderProgram();
+
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, depthMapTexture);
+		glUniform1i(glGetUniformLocation(screenQuadShader.shaderProgram, "depthMap"), 0);
+
+		glDisable(GL_DEPTH_TEST);
+		screenQuad.Draw(screenQuadShader);
+		glEnable(GL_DEPTH_TEST);
+	}
+	else {
+		glViewport(0, 0, myWindow.getWindowDimensions().width, myWindow.getWindowDimensions().height);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		skyBox.Draw(skyboxShader, view, projection);
+		myBasicShader.useShaderProgram();
+
+		view = myCamera.getViewMatrix();
+		glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+
+		// Update global light direction
+		glUniform3fv(globalLightDirLoc, 1, glm::value_ptr(glm::normalize(globalLightDir)));
+
+		glActiveTexture(GL_TEXTURE3);
+		glBindTexture(GL_TEXTURE_2D, depthMapTexture);
+		glUniform1i(glGetUniformLocation(myBasicShader.shaderProgram, "shadowMap"), 3);
+
+		glUniformMatrix4fv(glGetUniformLocation(myBasicShader.shaderProgram, "lightSpaceTrMatrix"),
+			1,
+			GL_FALSE,
+			glm::value_ptr(lightSpaceTrMatrix));
+
+		drawObjects(myBasicShader, false);
+
+		// Render light cube at globalLightDir position
+		lightShader.useShaderProgram();
+		glUniformMatrix4fv(glGetUniformLocation(lightShader.shaderProgram, "view"), 1, GL_FALSE, glm::value_ptr(view));
+
+		glm::mat4 model = glm::translate(glm::mat4(1.0f), globalLightDir);
+		glUniformMatrix4fv(glGetUniformLocation(lightShader.shaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(model));
+
+		lightCube.Draw(lightShader);
+	}
 }
 
 void renderAirport(gps::Shader shader) {
@@ -584,12 +826,12 @@ int main(int argc, const char* argv[]) {
 	}
 
 	initOpenGLState();
+	initFBO();
 	initModels();
 	initShaders();
 	initUniforms();
 	initSkyBox(false);
 	setWindowCallbacks();
-
 	glCheckError();
 	// application loop
 	while (!glfwWindowShouldClose(myWindow.getWindow())) {
@@ -599,7 +841,7 @@ int main(int argc, const char* argv[]) {
 		}
 		processMovement();
 		updateLightFlicker(currentTime);
-		renderScene();
+		renderSceneWithShadows();
 
 		glfwPollEvents();
 		glfwSwapBuffers(myWindow.getWindow());
