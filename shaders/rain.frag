@@ -1,6 +1,9 @@
 #version 410 core
-out vec4 FragColor;
+
+in vec3 vColor;
+
+out vec4 fragColor;
 
 void main() {
-    FragColor = vec4(0.5, 0.5, 1.0, 1.0); // Light blue for raindrops
+    fragColor = vec4(vColor, 0.8);
 }

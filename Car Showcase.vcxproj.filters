@@ -62,6 +62,18 @@
     <None Include="reflection.frag">
       <Filter>Resource Files</Filter>
     </None>
+    <None Include="shaders\depthMap.frag" />
+    <None Include="shaders\depthMap.vert" />
+    <None Include="shaders\lightCube.frag" />
+    <None Include="shaders\lightCube.vert" />
+    <None Include="shaders\screenQuad.frag" />
+    <None Include="shaders\screenQuad.vert" />
+    <None Include="shaders\rain.frag">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="shaders\rain.vert">
+      <Filter>Resource Files</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Mesh.hpp">

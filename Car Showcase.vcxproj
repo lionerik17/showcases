@@ -152,6 +152,8 @@
     <None Include="shaders\depthMap.vert" />
     <None Include="shaders\lightCube.frag" />
     <None Include="shaders\lightCube.vert" />
+    <None Include="shaders\rain.frag" />
+    <None Include="shaders\rain.vert" />
     <None Include="shaders\screenQuad.frag" />
     <None Include="shaders\screenQuad.vert" />
     <None Include="shaders\skyboxShader.frag" />
