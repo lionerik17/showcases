@@ -1,9 +1,2 @@
-﻿  main.cpp
-D:\UTCN\an3\sem1\PG\lab\showcases\main.cpp(361,11): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-D:\UTCN\an3\sem1\PG\lab\showcases\main.cpp(362,11): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-D:\UTCN\an3\sem1\PG\lab\showcases\main.cpp(366,16): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
-D:\UTCN\an3\sem1\PG\lab\showcases\main.cpp(367,16): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
-D:\UTCN\an3\sem1\PG\lab\showcases\main.cpp(369,10): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-D:\UTCN\an3\sem1\PG\lab\showcases\main.cpp(370,10): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-D:\UTCN\an3\sem1\PG\lab\showcases\main.cpp(882,28): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+﻿  Camera.cpp
   Car Showcase.vcxproj -> D:\UTCN\an3\sem1\PG\lab\showcases\x64\Debug\Car Showcase.exe

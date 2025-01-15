@@ -1,14 +1,13 @@
 #version 410 core
 
-in vec3 fPosition;   // Vertex position in object space
-in vec3 fNormal;     // Vertex normal in object space
-in vec2 fTexCoords;  // Texture coordinates
-flat in vec3 fNormalFlat; // Flat shading normal
+in vec3 fPosition;   
+in vec3 fNormal;     
+in vec2 fTexCoords;  
+flat in vec3 fNormalFlat;
 in vec4 fragPosLightSpace;
 
 out vec4 fColor;
 
-// Uniforms
 uniform mat4 model;           
 uniform mat4 view;            
 uniform mat4 projection;      
@@ -25,7 +24,6 @@ uniform bool useFlatShading;
 uniform bool isDay;
 uniform sampler2D shadowMap;
 
-// Lighting parameters
 vec3 ambient;
 uniform float ambientStrength = 0.15f;
 vec3 diffuse;
@@ -42,21 +40,16 @@ float linear = 0.0025f;
 float quadratic = 0.0025f;
 
 float computeShadow() {
-	// perform perspective divide 
 	vec3 normalizedCoords = fragPosLightSpace.xyz / fragPosLightSpace.w; 
 
-	// Transform to [0,1] range 
 	normalizedCoords = normalizedCoords * 0.5 + 0.5; 
 
-	// Get closest depth value from light's perspective 
 	float closestDepth = texture(shadowMap, normalizedCoords.xy).r; 
 
-	// Get depth of current fragment from light's perspective 
 	if (normalizedCoords.z > 1.0f) 
 		return 0.0f; 
 	float currentDepth = normalizedCoords.z; 
 
-	// Check whether current frag pos is in shadow 
 	float bias = 0.005f; 
 	float shadow = currentDepth - bias > closestDepth  ? 1.0f : 0.0f; 
 
@@ -109,7 +102,6 @@ void computeDirectionalLight(vec3 normalWorld) {
     float diff = max(dot(normalWorld, lightDir), 0.0);
     diffuse += 0.4 * diff * globalLightColor;
 
-    // Compute specular light for the global light
     vec3 viewDir = normalize(-fPosition); // View direction
     vec3 reflectDir = reflect(-lightDir, normalWorld);
     float spec = pow(max(dot(viewDir, reflectDir), 0.0), shininess);

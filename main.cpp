@@ -21,114 +21,119 @@
 #include <iostream>
 #include "SkyBox.hpp"
 
+// Render modes
+
 enum RenderingMode {
 	SOLID,
 	WIREFRAME,
 	POINTS,
 	SMOOTH
 };
+RenderingMode currentRenderingMode = SMOOTH;
+float debounceDelay = 0.3f;
+bool canSwitchRenderMode = true;
 
-RenderingMode currentRenderingMode = SOLID;
-float globalLightMoveSpeed = 0.75f;
+// Window
 
-// window
 gps::Window myWindow;
 
-// matrices
-glm::mat4 airportModelMatrix, airplaneModelMatrix, lamp1ModelMatrix;
+// Pressed keys array
+
+GLboolean pressedKeys[1024];
+
+// Matrices
+
+glm::mat4 airportModelMatrix, airplaneModelMatrix, lamp1ModelMatrix, propellerModelMatrix, modelMatrix;
+glm::mat3 airportNormalMatrix, airplaneNormalMatrix, lamp1NormalMatrix, normalMatrix;
 glm::mat4 view;
 glm::mat4 projection;
-glm::mat3 airportNormalMatrix, airplaneNormalMatrix, lamp1NormalMatrix;
-
-// light parameters
-glm::vec3 lightPosition;
-glm::vec3 lightDir;
-glm::vec3 lightColor;
-
-// global light
-glm::vec3 globalLightDir = glm::vec3(0.0f, 25.0f, 0.0f);
-glm::vec3 globalLightColor = glm::vec3(0.3f, 0.3f, 0.3f);
-GLuint globalLightDirLoc;
-GLuint globalLightColorLoc;
-
-// shader uniform locations
-GLint airportModelLoc, airplaneModelLoc, lamp1ModelLoc;
-GLint viewLoc;
-GLint projectionLoc;
-GLint airportNormalMatrixLoc, airplaneNormalMatrixLoc, lamp1NormalMatrixLoc;
-GLint lightPositionLoc;
-GLint lightDirLoc;
-GLint lightColorLoc;
-
-// camera
-gps::Camera myCamera(
-	glm::vec3(0.0f, 25.0f, -15.0f),
-	glm::vec3(0.0f, 20.0f, 15.0f),
-	glm::vec3(0.0f, 1.0f, 0.0f));
-
-GLfloat cameraSpeed = 0.75f;
-glm::vec3 orbitCenter = glm::vec3(0.0f, 50.0f, 0.0f);
+glm::vec3 orbitCenter = glm::vec3(25.0f, 50.0f, 25.0f);
+int propellerId = 27;
+float propellerRotationAngle = 0.0f;
 float airplaneOrbitAngle = 0.0f;
 float airplaneOrbitSpeed = 0.5f;
 float orbitRadius = 100.0f;
 
-GLboolean pressedKeys[1024];
+// Uniform Locations
 
-// models
-gps::Model3D airport, airplane, lamp1;
+GLint airportModelLoc, airplaneModelLoc, lamp1ModelLoc;
+GLint airportNormalMatrixLoc, airplaneNormalMatrixLoc, lamp1NormalMatrixLoc;
+GLint viewLoc;
+GLint projectionLoc;
 
-// shaders
-gps::Shader myBasicShader, skyboxShader;
+// Global light
 
-// skybox
+glm::vec3 globalLightDir = glm::vec3(0.0f, 25.0f, 0.0f);
+glm::vec3 globalLightColor = glm::vec3(0.3f, 0.3f, 0.3f);
+GLuint globalLightDirLoc;
+GLuint globalLightColorLoc;
+float globalLightMoveSpeed = 0.75f;
+
+// Lamp light
+
+glm::vec3 lightPosition;
+glm::vec3 lightDir;
+glm::vec3 lightColor;
+GLint lightPositionLoc;
+GLint lightDirLoc;
+GLint lightColorLoc;
+float currentTime = 0.0f;
+
+// Airplane light
+
+glm::vec3 light2Position;
+glm::vec3 light2Direction;
+glm::vec3 light2Color;
+GLint light2PositionLoc;
+GLint light2DirectionLoc;
+GLint light2ColorLoc;
+
+// Camera
+
+gps::Camera myCamera(
+	glm::vec3(0.0f, 25.0f, -15.0f),
+	glm::vec3(0.0f, 20.0f, 15.0f),
+	glm::vec3(0.0f, 1.0f, 0.0f));
+GLfloat cameraSpeed = 0.75f;
+
+// 3D Models
+
+gps::Model3D airport, airplane, lamp1, lightCube, screenQuad;
+
+// Shaders
+
+gps::Shader myBasicShader, skyboxShader, depthMapShader, screenQuadShader, lightShader;
+
+// Skybox
+
 gps::SkyBox skyBox;
+bool isDay = false;
+float ambientStrength = 0.0f;
 
-// propeller
-glm::mat4 propellerModelMatrix;
-int propellerId = 27;
-float propellerRotationAngle = 0.0f;
+// Fog
 
-// fog
 glm::vec3 fogColor = glm::vec3(0.1f, 0.1f, 0.2f);
 GLint fogColorLoc, fogStartLoc, fogEndLoc;
 float fogStart = 0.0f;
 float fogEnd = 1000.0f;
-float currentTime = 0.0f;
 
-// light parameters for the second light
-glm::vec3 light2Position;
-glm::vec3 light2Color;
+// Shadow Map
 
-// Uniform locations for the second light
-GLint light2PositionLoc;
-GLint light2ColorLoc;
-glm::vec3 light2Direction;
-GLint light2DirectionLoc;
-
-bool canSwitchRenderMode = true;
-const float debounceDelay = 0.3f;
-bool isDay = false;
-
-float angleY = 0.0f;
+glm::mat4 lightRotation;
 GLfloat lightAngle;
-gps::Model3D lightCube;
-gps::Model3D screenQuad;
-
-gps::Shader lightShader;
-gps::Shader screenQuadShader;
-gps::Shader depthMapShader;
 GLuint shadowMapFBO;
 GLuint depthMapTexture;
-glm::mat4 lightRotation;
 const unsigned int SHADOW_WIDTH = 2048;
 const unsigned int SHADOW_HEIGHT = 2048;
-bool showDepthMap;
+bool showDepthMap = false;
 
+// Mouse
+
+float lastX = 1024.0f;
+float lastY = 768.0f; 
+float sensitivity = 0.025f;
 bool firstMouse = true;
 bool enableMouse = false;
-float lastX = 1024.0f / 2.0f;
-float lastY = 768.0f / 2.0f; 
-float sensitivity = 0.03f;
 
 void initFBO() {
 	//TODO - Create the FBO, the depth texture and attach the depth texture to the FBO
@@ -154,12 +159,12 @@ void initFBO() {
 }
 
 glm::mat4 computeLightSpaceTrMatrix() {
-	glm::vec3 lightPos = -glm::normalize(globalLightDir) * 10.0f;
+	glm::vec3 lightPos = -glm::normalize(globalLightDir) * 25.0f;
 
 	glm::mat4 lightView = glm::lookAt(lightPos, glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 
-	const GLfloat near_plane = 1.0f, far_plane = 50.0f; 
-	const GLfloat ortho_size = 50.0f;
+	const GLfloat near_plane = 25.0f, far_plane = 100.0f; 
+	const GLfloat ortho_size = 25.0f;
 
 	glm::mat4 lightProjection = glm::ortho(-ortho_size, ortho_size, -ortho_size, ortho_size, near_plane, far_plane);
 
@@ -167,6 +172,7 @@ glm::mat4 computeLightSpaceTrMatrix() {
 }
 
 void initSkyBox(bool isDay) {
+	skyboxShader.useShaderProgram();
 	std::vector<const GLchar*> faces;
 
 	if (!isDay) {
@@ -226,13 +232,12 @@ void windowResizeCallback(GLFWwindow* window, int width, int height) {
 	}
 	glViewport(0, 0, width, height);
 
-	float aspectRatio = static_cast<float>(width) / static_cast<float>(height);
-	projection = glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 1000.0f);
+	float aspectRatio = (float) width / height;
+	projection = glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 2000.0f);
 
 	myBasicShader.useShaderProgram();
 	glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
-	WindowDimensions newDimension = { width, height };
-	myWindow.setWindowDimensions(newDimension);
+	myWindow.setWindowDimensions({ width, height });
 }
 
 void switchRenderMode(RenderingMode mode) {
@@ -242,26 +247,26 @@ void switchRenderMode(RenderingMode mode) {
 
 	switch (mode) {
 	case SOLID:
-		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); // Solid mode
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 		glUniform1i(useFlatShadingLoc, GL_TRUE);
 		glDisable(GL_POLYGON_SMOOTH);
 		std::cout << "Switched to SOLID mode." << std::endl;
 		break;
 	case WIREFRAME:
-		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); // Wireframe mode
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 		glUniform1i(useFlatShadingLoc, GL_FALSE);
 		glDisable(GL_POLYGON_SMOOTH);
 		std::cout << "Switched to WIREFRAME mode." << std::endl;
 		break;
 	case POINTS:
-		glPolygonMode(GL_FRONT_AND_BACK, GL_POINT); // Points mode
+		glPolygonMode(GL_FRONT_AND_BACK, GL_POINT);
 		glUniform1i(useFlatShadingLoc, GL_FALSE);
 		glDisable(GL_POLYGON_SMOOTH);
-		glPointSize(5.0f); // Set point size
+		glPointSize(10.0f);
 		std::cout << "Switched to POINTS mode." << std::endl;
 		break;
 	case SMOOTH:
-		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); // Smooth Mode
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 		glUniform1i(useFlatShadingLoc, GL_FALSE);
 		glEnable(GL_POLYGON_SMOOTH);
 		glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST);
@@ -285,12 +290,10 @@ void keyboardCallback(GLFWwindow* window, int key, int scancode, int action, int
 
 	if (key == GLFW_KEY_Z && action == GLFW_PRESS) {
 		airplaneOrbitSpeed += 0.1f;
-		std::cout << "Increased airplane orbit speed: " << airplaneOrbitSpeed << std::endl;
 	}
 
 	if (key == GLFW_KEY_X && action == GLFW_PRESS) {
 		airplaneOrbitSpeed = std::max(0.1f, airplaneOrbitSpeed - 0.1f);
-		std::cout << "Decreased airplane orbit speed: " << airplaneOrbitSpeed << std::endl;
 	}
 
 	if (key >= 0 && key < 1024) {
@@ -312,9 +315,7 @@ void keyboardCallback(GLFWwindow* window, int key, int scancode, int action, int
 
 			if (key == GLFW_KEY_N) {
 				isDay = !isDay;
-				float ambientStrength;
 				if (isDay) {
-					// Daytime: Disable fog and lights
 					fogStart = 1000.0f;
 					fogEnd = 2000.0f;
 					fogColor = glm::vec3(1.0f, 1.0f, 1.0f);
@@ -324,7 +325,6 @@ void keyboardCallback(GLFWwindow* window, int key, int scancode, int action, int
 					ambientStrength = 0.85f;
 				}
 				else {
-					// Nighttime: Enable fog and lights
 					fogStart = 0.0f;
 					fogEnd = 1000.0f;
 					fogColor = glm::vec3(0.1f, 0.1f, 0.2f);
@@ -336,12 +336,15 @@ void keyboardCallback(GLFWwindow* window, int key, int scancode, int action, int
 
 				myBasicShader.useShaderProgram();
 				glUniform1i(glGetUniformLocation(myBasicShader.shaderProgram, "isDay"), isDay);
+
 				glUniform3fv(glGetUniformLocation(myBasicShader.shaderProgram, "fogColor"), 1, glm::value_ptr(fogColor));
 				glUniform1f(glGetUniformLocation(myBasicShader.shaderProgram, "fogStart"), fogStart);
 				glUniform1f(glGetUniformLocation(myBasicShader.shaderProgram, "fogEnd"), fogEnd);
+
 				glUniform3fv(glGetUniformLocation(myBasicShader.shaderProgram, "lightColor"), 1, glm::value_ptr(lightColor));
 				glUniform3fv(glGetUniformLocation(myBasicShader.shaderProgram, "light2Color"), 1, glm::value_ptr(light2Color));
 				glUniform1f(glGetUniformLocation(myBasicShader.shaderProgram, "ambientStrength"), ambientStrength);
+
 				initSkyBox(isDay);
 
 				std::cout << (isDay ? "Day mode activated." : "Night mode activated.") << std::endl;
@@ -354,6 +357,16 @@ void keyboardCallback(GLFWwindow* window, int key, int scancode, int action, int
 			pressedKeys[key] = false;
 		}
 	}
+}
+
+void updateCamera() {
+	view = myCamera.getViewMatrix();
+	myBasicShader.useShaderProgram();
+	glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+
+	airportNormalMatrix = glm::mat3(glm::inverseTranspose(view * airportModelMatrix));
+	airplaneNormalMatrix = glm::mat3(glm::inverseTranspose(view * airplaneModelMatrix));
+	lamp1NormalMatrix = glm::mat3(glm::inverseTranspose(view * lamp1ModelMatrix));
 }
 
 void mouseCallback(GLFWwindow* window, double xpos, double ypos) {
@@ -383,94 +396,50 @@ void mouseCallback(GLFWwindow* window, double xpos, double ypos) {
 		xoffset = -89.0f;
 
 	myCamera.rotate(yoffset, xoffset);
-
-	view = myCamera.getViewMatrix();
-	myBasicShader.useShaderProgram();
-	glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
-}
-void updateLightFlicker(float currentTime) {
-	float flicker = 0.8f + 0.2f * sin(currentTime * 10.0f) + (rand() % 10) / 50.0f;
-
-	lightColor = glm::vec3(1.0f, 1.0f, 1.0f) * flicker;
-
-	myBasicShader.useShaderProgram();
-	glUniform3fv(lightColorLoc, 1, glm::value_ptr(lightColor));
+	updateCamera();
 }
 
 void processMovement() {
 	if (pressedKeys[GLFW_KEY_W]) {
 		myCamera.move(gps::MOVE_FORWARD, cameraSpeed);
-		//update view matrix
-		view = myCamera.getViewMatrix();
-		myBasicShader.useShaderProgram();
-		glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
-		// compute normal matrix for teapot
-		airportNormalMatrix = glm::mat3(glm::inverseTranspose(view * airportModelMatrix));
+		updateCamera();
 	}
 
 	if (pressedKeys[GLFW_KEY_S]) {
 		myCamera.move(gps::MOVE_BACKWARD, cameraSpeed);
-		//update view matrix
-		view = myCamera.getViewMatrix();
-		myBasicShader.useShaderProgram();
-		glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
-		// compute normal matrix for teapot
-		airportNormalMatrix = glm::mat3(glm::inverseTranspose(view * airportModelMatrix));
+		updateCamera();
 	}
 
 	if (pressedKeys[GLFW_KEY_A]) {
 		myCamera.move(gps::MOVE_LEFT, cameraSpeed);
-		//update view matrix
-		view = myCamera.getViewMatrix();
-		myBasicShader.useShaderProgram();
-		glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
-		// compute normal matrix for teapot
-		airportNormalMatrix = glm::mat3(glm::inverseTranspose(view * airportModelMatrix));
+		updateCamera();
 	}
 
 	if (pressedKeys[GLFW_KEY_D]) {
 		myCamera.move(gps::MOVE_RIGHT, cameraSpeed);
-		//update view matrix
-		view = myCamera.getViewMatrix();
-		myBasicShader.useShaderProgram();
-		glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
-		// compute normal matrix for teapot
-		airportNormalMatrix = glm::mat3(glm::inverseTranspose(view * airportModelMatrix));
+		updateCamera();
 	}
 
 	if (pressedKeys[GLFW_KEY_UP]) {
 		myCamera.rotate(cameraSpeed, 0.0f);
-		view = myCamera.getViewMatrix();
-		myBasicShader.useShaderProgram();
-		glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
-		airportNormalMatrix = glm::mat3(glm::inverseTranspose(view * airportModelMatrix));
+		updateCamera();
 	}
 
 	if (pressedKeys[GLFW_KEY_DOWN]) {
 		myCamera.rotate(-cameraSpeed, 0.0f);
-		view = myCamera.getViewMatrix();
-		myBasicShader.useShaderProgram();
-		glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
-		airportNormalMatrix = glm::mat3(glm::inverseTranspose(view * airportModelMatrix));
+		updateCamera();
 	}
 
 	if (pressedKeys[GLFW_KEY_LEFT]) {
 		myCamera.rotate(0.0f, cameraSpeed);
-		view = myCamera.getViewMatrix();
-		myBasicShader.useShaderProgram();
-		glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
-		airportNormalMatrix = glm::mat3(glm::inverseTranspose(view * airportModelMatrix));
+		updateCamera();
 	}
 
 	if (pressedKeys[GLFW_KEY_RIGHT]) {
 		myCamera.rotate(0.0f, -cameraSpeed);
-		view = myCamera.getViewMatrix();
-		myBasicShader.useShaderProgram();
-		glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
-		airportNormalMatrix = glm::mat3(glm::inverseTranspose(view * airportModelMatrix));
+		updateCamera();
 	}
 
-	// Global light movement controls
 	if (pressedKeys[GLFW_KEY_I]) {
 		globalLightDir.z -= globalLightMoveSpeed; // Move light forward
 	}
@@ -496,8 +465,17 @@ void processMovement() {
 	}
 }
 
+void updateLightFlicker(float currentTime) {
+	float flicker = 0.8f + 0.2f * sin(currentTime * 10.0f) + (rand() % 10) / 50.0f;
+
+	lightColor = glm::vec3(1.0f, 1.0f, 1.0f) * flicker;
+
+	myBasicShader.useShaderProgram();
+	glUniform3fv(lightColorLoc, 1, glm::value_ptr(lightColor));
+}
+
 void initOpenGLWindow() {
-	myWindow.Create(1024, 768, "OpenGL Project Core");
+	myWindow.Create(1024, 768, "Airport Scene");
 }
 
 void setWindowCallbacks() {
@@ -526,11 +504,8 @@ void initModels() {
 }
 
 void initShaders() {
-	myBasicShader.loadShader(
-		"shaders/basic.vert",
-		"shaders/basic.frag");
+	myBasicShader.loadShader("shaders/basic.vert", "shaders/basic.frag");
 	skyboxShader.loadShader("shaders/skyboxShader.vert", "shaders/skyboxShader.frag");
-	skyboxShader.useShaderProgram();
 	lightShader.loadShader("shaders/lightCube.vert", "shaders/lightCube.frag");
 	depthMapShader.loadShader("shaders/depthMap.vert", "shaders/depthMap.frag");
 	screenQuadShader.loadShader("shaders/screenQuad.vert", "shaders/screenQuad.frag");
@@ -538,6 +513,8 @@ void initShaders() {
 
 void initUniforms() {
 	myBasicShader.useShaderProgram();
+
+	// Compute model matrices
 
 	airportModelMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(0.5f, 0.5f, 0.5f));
 	airportModelLoc = glGetUniformLocation(myBasicShader.shaderProgram, "model");
@@ -553,13 +530,14 @@ void initUniforms() {
 	lamp1ModelMatrix = glm::scale(lamp1ModelMatrix, glm::vec3(10.0f, 10.0f, 10.0f));
 	lamp1ModelLoc = glGetUniformLocation(myBasicShader.shaderProgram, "model");
 
-	// get view matrix for current camera
+	// Compute view
+
 	view = myCamera.getViewMatrix();
 	viewLoc = glGetUniformLocation(myBasicShader.shaderProgram, "view");
-	// send view matrix to shader
 	glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
 
-	// compute normal matrix for teapot
+	// Compute normal matrices
+
 	airportNormalMatrix = glm::mat3(glm::inverseTranspose(view * airportModelMatrix));
 	airportNormalMatrixLoc = glGetUniformLocation(myBasicShader.shaderProgram, "normalMatrix");
 
@@ -569,45 +547,37 @@ void initUniforms() {
 	lamp1NormalMatrix = glm::mat3(glm::inverseTranspose(view * lamp1ModelMatrix));
 	lamp1NormalMatrixLoc = glGetUniformLocation(myBasicShader.shaderProgram, "normalMatrix");
 
-	// create projection matrix
-	projection = glm::perspective(glm::radians(45.0f),
-		(float)myWindow.getWindowDimensions().width / (float)myWindow.getWindowDimensions().height,
-		0.1f, 2000.0f);
+	// Compute projection matrix
+
+	float aspectRatio = (float) myWindow.getWindowDimensions().width / myWindow.getWindowDimensions().height;
+	projection = glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 2000.0f);
 	projectionLoc = glGetUniformLocation(myBasicShader.shaderProgram, "projection");
-	// send projection matrix to shader
 	glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
-
-	fogColorLoc = glGetUniformLocation(myBasicShader.shaderProgram, "fogColor");
-	fogStartLoc = glGetUniformLocation(myBasicShader.shaderProgram, "fogStart");
-	fogEndLoc = glGetUniformLocation(myBasicShader.shaderProgram, "fogEnd");
-
-	glUniform3fv(fogColorLoc, 1, glm::value_ptr(fogColor));
-	glUniform1f(fogStartLoc, fogStart);
-	glUniform1f(fogEndLoc, fogEnd);
 
 	// Directional light setup
 	
 	globalLightDirLoc = glGetUniformLocation(myBasicShader.shaderProgram, "globalLightDir");
-	glUniform3fv(globalLightDirLoc, 1, glm::value_ptr(globalLightDir));
 	globalLightColorLoc = glGetUniformLocation(myBasicShader.shaderProgram, "globalLightColor");
+
+	glUniform3fv(globalLightDirLoc, 1, glm::value_ptr(globalLightDir));
 	glUniform3fv(globalLightColorLoc, 1, glm::value_ptr(globalLightColor));
 
-	lightPosition = glm::vec3(330.0f, 60.0f, 5.0f);
-	lightPositionLoc = glGetUniformLocation(myBasicShader.shaderProgram, "lightPosition");
-	glUniform3fv(lightPositionLoc, 1, glm::value_ptr(lightPosition));
+	// Point light setup (lamp)
 
-	//set the light direction (direction towards the light)
+	lightPosition = glm::vec3(330.0f, 60.0f, 5.0f);
+	lightColor = glm::vec3(0.0f, 0.0f, 0.0f);
 	lightDir = glm::vec3(1.0f, 0.0f, 0.0f);
 	lightRotation = glm::rotate(glm::mat4(1.0f), glm::radians(lightAngle), glm::vec3(0.0f, 1.0f, 0.0f));
+
+	lightPositionLoc = glGetUniformLocation(myBasicShader.shaderProgram, "lightPosition");
+	lightColorLoc = glGetUniformLocation(myBasicShader.shaderProgram, "lightColor");
 	lightDirLoc = glGetUniformLocation(myBasicShader.shaderProgram, "lightDir");
-	// send light dir to shader
+
+	glUniform3fv(lightPositionLoc, 1, glm::value_ptr(lightPosition));
+	glUniform3fv(lightColorLoc, 1, glm::value_ptr(lightColor));
 	glUniform3fv(lightDirLoc, 1, glm::value_ptr(glm::inverseTranspose(glm::mat3(view * lightRotation)) * lightDir));
 
-	//set light color
-	lightColor = glm::vec3(0.0f, 0.0f, 0.0f);
-	lightColorLoc = glGetUniformLocation(myBasicShader.shaderProgram, "lightColor");
-	// send light color to shader
-	glUniform3fv(lightColorLoc, 1, glm::value_ptr(lightColor));
+	// Point light setup (airplane)
 
 	light2Position = glm::vec3(-70.0f, 100.0f, 100.0f);
 	light2Color = glm::vec3(0.5f, 1.0f, 1.0f);
@@ -621,21 +591,27 @@ void initUniforms() {
 	glUniform3fv(light2PositionLoc, 1, glm::value_ptr(light2Position));
 	glUniform3fv(light2ColorLoc, 1, glm::value_ptr(light2Color));
 
+	// Fog setup
+
+	fogColorLoc = glGetUniformLocation(myBasicShader.shaderProgram, "fogColor");
+	fogStartLoc = glGetUniformLocation(myBasicShader.shaderProgram, "fogStart");
+	fogEndLoc = glGetUniformLocation(myBasicShader.shaderProgram, "fogEnd");
+
+	glUniform3fv(fogColorLoc, 1, glm::value_ptr(fogColor));
+	glUniform1f(fogStartLoc, fogStart);
+	glUniform1f(fogEndLoc, fogEnd);
+
+	// Light cube setup
+
 	lightShader.useShaderProgram();
 	glUniformMatrix4fv(glGetUniformLocation(lightShader.shaderProgram, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
 }
 
 void drawObjects(gps::Shader shader, bool depthPass) {
-	//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-	//render the scene
-	//skyBox.Draw(skyboxShader, view, projection);
 	shader.useShaderProgram();
 
-	glm::mat4 modelMatrix;
-	glm::mat3 normalMatrix;
-
 	// Render airport
+
 	modelMatrix = airportModelMatrix;
 	glUniformMatrix4fv(glGetUniformLocation(shader.shaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(modelMatrix));
 	if (!depthPass) {
@@ -649,7 +625,8 @@ void drawObjects(gps::Shader shader, bool depthPass) {
 		airplaneOrbitAngle += 360.0f;
 	}
 
-	// Render airplane
+	// Render airplane w/o propeller
+
 	glm::vec3 airplanePosition = orbitCenter + glm::vec3(
 		orbitRadius * cos(glm::radians(airplaneOrbitAngle)),
 		0.0f,
@@ -671,18 +648,14 @@ void drawObjects(gps::Shader shader, bool depthPass) {
 	}
 	airplane.DrawExcept(shader, { propellerId });
 
+	// Render propeller and airplane w/ propeller
+
 	propellerRotationAngle += 45.0f;
 	if (propellerRotationAngle >= 360.0f) {
 		propellerRotationAngle -= 360.0f;
 	}
 
 	propellerModelMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(propellerRotationAngle), glm::vec3(1.0f, 0.0f, 0.0f));
-
-	/*glm::mat4 finalAirplaneModelMatrix = airplaneModelMatrix * propellerModelMatrix;
-	glm::mat3 finalAirplaneNormalMatrix = glm::inverseTranspose(view * finalAirplaneModelMatrix);
-
-	glUniformMatrix4fv(airplaneModelLoc, 1, GL_FALSE, glm::value_ptr(finalAirplaneModelMatrix));
-	glUniformMatrix3fv(airplaneNormalMatrixLoc, 1, GL_FALSE, glm::value_ptr(finalAirplaneNormalMatrix));*/
 
 	modelMatrix = modelMatrix * propellerModelMatrix;
 	glUniformMatrix4fv(glGetUniformLocation(shader.shaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(modelMatrix));
@@ -693,6 +666,7 @@ void drawObjects(gps::Shader shader, bool depthPass) {
 	airplane.DrawPart(shader, { propellerId });
 
 	// Render lamp
+
 	modelMatrix = lamp1ModelMatrix;
 	glUniformMatrix4fv(glGetUniformLocation(shader.shaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(modelMatrix));
 	if (!depthPass) {
@@ -745,7 +719,6 @@ void renderSceneWithShadows() {
 		view = myCamera.getViewMatrix();
 		glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
 
-		// Update global light direction
 		glUniform3fv(globalLightDirLoc, 1, glm::value_ptr(glm::normalize(globalLightDir)));
 
 		glActiveTexture(GL_TEXTURE3);
@@ -759,7 +732,6 @@ void renderSceneWithShadows() {
 
 		drawObjects(myBasicShader, false);
 
-		// Render light cube at globalLightDir position
 		lightShader.useShaderProgram();
 		glUniformMatrix4fv(glGetUniformLocation(lightShader.shaderProgram, "view"), 1, GL_FALSE, glm::value_ptr(view));
 
@@ -770,96 +742,12 @@ void renderSceneWithShadows() {
 	}
 }
 
-void renderAirport(gps::Shader shader) {
-	// select active shader program
-	shader.useShaderProgram();
-
-	//send teapot model matrix data to shader
-	glUniformMatrix4fv(airportModelLoc, 1, GL_FALSE, glm::value_ptr(airportModelMatrix));
-
-	//send teapot normal matrix data to shader
-	glUniformMatrix3fv(airportNormalMatrixLoc, 1, GL_FALSE, glm::value_ptr(airportNormalMatrix));
-
-	// draw airport
-	airport.Draw(shader);
-}
-
-void renderAirplane(gps::Shader shader) {
-	shader.useShaderProgram();
-
-	airplaneOrbitAngle -= 0.5f;
-	if (airplaneOrbitAngle < 0.0f) {
-		airplaneOrbitAngle += 360.0f;
-	}
-
-	glm::vec3 airplanePosition = orbitCenter + glm::vec3(
-		orbitRadius * cos(glm::radians(airplaneOrbitAngle)), 
-		0.0f,                                               
-		orbitRadius * sin(glm::radians(airplaneOrbitAngle))
-	);
-
-	glm::vec3 toCenter = glm::normalize(orbitCenter - airplanePosition);
-
-	float yaw = glm::degrees(atan2(toCenter.z, toCenter.x));
-
-	airplaneModelMatrix = glm::translate(glm::mat4(1.0f), airplanePosition);
-	airplaneModelMatrix = glm::rotate(airplaneModelMatrix, glm::radians(-yaw + 90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-	airplaneModelMatrix = glm::rotate(airplaneModelMatrix, glm::radians(45.0f), glm::vec3(1.0f, 0.0f, 0.0f));    
-	airplaneModelMatrix = glm::scale(airplaneModelMatrix, glm::vec3(2.0f, 2.0f, 2.0f));
-
-	glUniformMatrix4fv(airplaneModelLoc, 1, GL_FALSE, glm::value_ptr(airplaneModelMatrix));
-	glUniformMatrix3fv(airplaneNormalMatrixLoc, 1, GL_FALSE, glm::value_ptr(airplaneNormalMatrix));
-
-	airplane.DrawExcept(shader, { propellerId });
-
-	propellerRotationAngle += 90.0f;
-	if (propellerRotationAngle >= 360.0f) {
-		propellerRotationAngle -= 360.0f;
-	}
-
-	propellerModelMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(propellerRotationAngle), glm::vec3(1.0f, 0.0f, 0.0f));
-
-	glm::mat4 finalAirplaneModelMatrix = airplaneModelMatrix * propellerModelMatrix;
-	glm::mat3 finalAirplaneNormalMatrix = glm::inverseTranspose(view * finalAirplaneModelMatrix);
-
-	glUniformMatrix4fv(airplaneModelLoc, 1, GL_FALSE, glm::value_ptr(finalAirplaneModelMatrix));
-	glUniformMatrix3fv(airplaneNormalMatrixLoc, 1, GL_FALSE, glm::value_ptr(finalAirplaneNormalMatrix));
-
-	airplane.DrawPart(shader, { propellerId });
-
-	light2Position = airplanePosition + glm::vec3(0.0f, -25.0f, -5.0f);
-	glUniform3fv(light2PositionLoc, 1, glm::value_ptr(light2Position));
-}
-
-void renderLamp(gps::Shader shader) {
-	shader.useShaderProgram();
-
-	glUniformMatrix4fv(lamp1ModelLoc, 1, GL_FALSE, glm::value_ptr(lamp1ModelMatrix));
-
-	glUniformMatrix3fv(lamp1NormalMatrixLoc, 1, GL_FALSE, glm::value_ptr(lamp1NormalMatrix));
-
-	lamp1.Draw(shader);
-}
-
-void renderScene() {
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-	//render the scene
-	skyBox.Draw(skyboxShader, view, projection);
-	// render the airport
-	renderAirport(myBasicShader);
-	renderAirplane(myBasicShader);
-	renderLamp(myBasicShader);
-}
-
 void cleanup() {
 	myWindow.Delete();
 	//cleanup code for your own data
 }
 
 int main(int argc, const char* argv[]) {
-
-	float lastTime = 0.0f;
 
 	try {
 		initOpenGLWindow();
@@ -877,15 +765,18 @@ int main(int argc, const char* argv[]) {
 	initSkyBox(false);
 	setWindowCallbacks();
 	glCheckError();
+
+	globalLightDir.z += 1e-3;
+
 	// application loop
 	while (!glfwWindowShouldClose(myWindow.getWindow())) {
 		currentTime = glfwGetTime();
 		if (!canSwitchRenderMode && currentTime > debounceDelay) {
 			canSwitchRenderMode = true;
 		}
+		renderSceneWithShadows();
 		processMovement();
 		updateLightFlicker(currentTime);
-		renderSceneWithShadows();
 
 		glfwPollEvents();
 		glfwSwapBuffers(myWindow.getWindow());

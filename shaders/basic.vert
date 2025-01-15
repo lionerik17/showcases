@@ -24,9 +24,9 @@ void main()
 	gl_Position = projection * view * model * vec4(vPosition, 1.0f);
 	fPosition = vPosition;
     if (useFlatShading) {
-        fNormalFlat = normalize(normalMatrix * vNormal); // Flat shading
+        fNormalFlat = normalize(normalMatrix * vNormal);
     } else {
-        fNormal = normalize(normalMatrix * vNormal); // Smooth shading
+        fNormal = normalize(normalMatrix * vNormal);
     }
 	fTexCoords = vTexCoords;
 }
