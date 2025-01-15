@@ -2,6 +2,7 @@
 #include <glm/gtx/rotate_vector.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+
 namespace gps {
 
     //Camera constructor
@@ -19,19 +20,19 @@ namespace gps {
         return glm::lookAt(cameraPosition, cameraPosition + cameraFrontDirection, this->cameraUpDirection);
     }
 
-    glm::vec3 Camera::getPosition() const {
+    glm::vec3 Camera::getCameraPosition() const {
         return cameraPosition;
+    }
+
+    void Camera::setCameraPosition(const glm::vec3& position) {
+        this->cameraPosition = position;
     }
 
     glm::vec3 Camera::getCameraTarget() const {
         return cameraTarget;
     }
 
-    void Camera::setPosition(const glm::vec3& position) {
-        this->cameraPosition = position;
-    }
-
-    void Camera::setTarget(const glm::vec3& target) {
+    void Camera::setCameraTarget(const glm::vec3& target) {
         this->cameraTarget = target;
         this->cameraFrontDirection = glm::normalize(target - cameraPosition);
         this->cameraRightDirection = glm::normalize(glm::cross(cameraFrontDirection, glm::vec3(0.0f, 1.0f, 0.0f)));

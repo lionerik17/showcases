@@ -393,8 +393,8 @@ void present() {
 		glm::vec3 cameraPosition = glm::vec3(x, presentationCenter.y, z);
 		glm::vec3 cameraTarget = presentationCenter;
 
-		myCamera.setPosition(cameraPosition);
-		myCamera.setTarget(cameraTarget);
+		myCamera.setCameraPosition(cameraPosition);
+		myCamera.setCameraTarget(cameraTarget);
 		updateCamera();
 	}
 }
