@@ -49,16 +49,12 @@ namespace gps {
     }
 
     void Camera::rotate(float pitch, float yaw) {
-        // Rotate front direction for pitch around the camera's right axis
         cameraFrontDirection = glm::rotate(cameraFrontDirection, glm::radians(pitch), cameraRightDirection);
 
-        // Rotate front direction for yaw around the world up axis
         cameraFrontDirection = glm::rotate(cameraFrontDirection, glm::radians(yaw), glm::vec3(0.0f, 1.0f, 0.0f));
 
-        // Normalize the front direction
         cameraFrontDirection = glm::normalize(cameraFrontDirection);
 
-        // Recalculate right and up directions to maintain perpendicularity
         cameraRightDirection = glm::normalize(glm::cross(cameraFrontDirection, glm::vec3(0.0f, 1.0f, 0.0f)));
         cameraUpDirection = glm::normalize(glm::cross(cameraRightDirection, cameraFrontDirection));
     }

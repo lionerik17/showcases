@@ -132,10 +132,10 @@ void main() {
         diffuse *= (1.0 - shadow); 
         specular *= (1.0 - shadow);
     } else {
-        computeDirectionalLight(normalWorld); // Add directional light for the day
+        computeDirectionalLight(normalWorld);
         ambient = ambientStrength * globalLightColor;
 
-        ambient *= mix(0.3, 1.0, 1.0 - shadow); // Blend shadows with some ambient light
+        ambient *= mix(0.3, 1.0, 1.0 - shadow);
     }
 
     vec3 color = (ambient + diffuse) * texture(diffuseTexture, fTexCoords).rgb 
