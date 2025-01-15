@@ -1,20 +1,19 @@
 ﻿  main.cpp
-D:\UTCN\an3\sem1\PG\lab\showcases\main.cpp(374,11): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-D:\UTCN\an3\sem1\PG\lab\showcases\main.cpp(375,11): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-D:\UTCN\an3\sem1\PG\lab\showcases\main.cpp(379,16): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
-D:\UTCN\an3\sem1\PG\lab\showcases\main.cpp(380,16): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
-D:\UTCN\an3\sem1\PG\lab\showcases\main.cpp(382,10): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-D:\UTCN\an3\sem1\PG\lab\showcases\main.cpp(383,10): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-D:\UTCN\an3\sem1\PG\lab\showcases\main.cpp(769,22): warning C4305: '+=': truncation from 'double' to 'T'
-D:\UTCN\an3\sem1\PG\lab\showcases\main.cpp(769,22): warning C4305:         with
-D:\UTCN\an3\sem1\PG\lab\showcases\main.cpp(769,22): warning C4305:         [
-D:\UTCN\an3\sem1\PG\lab\showcases\main.cpp(769,22): warning C4305:             T=float
-D:\UTCN\an3\sem1\PG\lab\showcases\main.cpp(769,22): warning C4305:         ]
-D:\UTCN\an3\sem1\PG\lab\showcases\main.cpp(773,28): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+D:\UTCN\an3\sem1\PG\lab\showcases\main.cpp(404,11): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+D:\UTCN\an3\sem1\PG\lab\showcases\main.cpp(405,11): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+D:\UTCN\an3\sem1\PG\lab\showcases\main.cpp(409,16): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+D:\UTCN\an3\sem1\PG\lab\showcases\main.cpp(410,16): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+D:\UTCN\an3\sem1\PG\lab\showcases\main.cpp(412,10): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+D:\UTCN\an3\sem1\PG\lab\showcases\main.cpp(413,10): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+D:\UTCN\an3\sem1\PG\lab\showcases\main.cpp(799,22): warning C4305: '+=': truncation from 'double' to 'T'
+D:\UTCN\an3\sem1\PG\lab\showcases\main.cpp(799,22): warning C4305:         with
+D:\UTCN\an3\sem1\PG\lab\showcases\main.cpp(799,22): warning C4305:         [
+D:\UTCN\an3\sem1\PG\lab\showcases\main.cpp(799,22): warning C4305:             T=float
+D:\UTCN\an3\sem1\PG\lab\showcases\main.cpp(799,22): warning C4305:         ]
+D:\UTCN\an3\sem1\PG\lab\showcases\main.cpp(803,28): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
 LINK : warning LNK4098: defaultlib 'MSVCRTD' conflicts with use of other libs; use /NODEFAULTLIB:library
   Generating code
-  0 of 1845 functions ( 0.0%) were compiled, the rest were copied from previous compilation.
-    0 functions were new in current compilation
-    0 functions had inline decision re-evaluated but remain unchanged
+  Previous IPDB and IOBJ mismatch, fall back to full compilation.
+  All 1848 functions were compiled because no usable IPDB/IOBJ from previous compilation was found.
   Finished generating code
   Car Showcase.vcxproj -> D:\UTCN\an3\sem1\PG\lab\showcases\x64\Release\Car Showcase.exe

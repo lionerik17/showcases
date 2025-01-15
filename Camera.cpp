@@ -27,6 +27,17 @@ namespace gps {
         return cameraTarget;
     }
 
+    void Camera::setPosition(const glm::vec3& position) {
+        this->cameraPosition = position;
+    }
+
+    void Camera::setTarget(const glm::vec3& target) {
+        this->cameraTarget = target;
+        this->cameraFrontDirection = glm::normalize(target - cameraPosition);
+        this->cameraRightDirection = glm::normalize(glm::cross(cameraFrontDirection, glm::vec3(0.0f, 1.0f, 0.0f)));
+        this->cameraUpDirection = glm::cross(cameraRightDirection, cameraFrontDirection);
+    }
+
     //update the camera internal parameters following a camera move event
     void Camera::move(MOVE_DIRECTION direction, float speed) {
         switch (direction)

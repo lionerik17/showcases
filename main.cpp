@@ -135,6 +135,14 @@ float sensitivity = 0.025f;
 bool firstMouse = true;
 bool enableMouse = false;
 
+// Presentation mode
+
+glm::vec3 presentationCenter = glm::vec3(200.0f, 30.0f, 25.0f);
+float presentationAngle = 0.0f; 
+float presentationSpeed = 0.25f; 
+float presentationRadius = 200.0f;
+bool presentationMode = false;
+
 void initFBO() {
 	//TODO - Create the FBO, the depth texture and attach the depth texture to the FBO
 	glGenFramebuffers(1, &shadowMapFBO);
@@ -296,6 +304,10 @@ void keyboardCallback(GLFWwindow* window, int key, int scancode, int action, int
 		airplaneOrbitSpeed = std::max(0.1f, airplaneOrbitSpeed - 0.1f);
 	}
 
+	if (key == GLFW_KEY_Q && action == GLFW_PRESS) {
+		presentationMode = !presentationMode;
+	}
+
 	if (key >= 0 && key < 1024) {
 		if (action == GLFW_PRESS) {
 			pressedKeys[key] = true;
@@ -367,6 +379,24 @@ void updateCamera() {
 	airportNormalMatrix = glm::mat3(glm::inverseTranspose(view * airportModelMatrix));
 	airplaneNormalMatrix = glm::mat3(glm::inverseTranspose(view * airplaneModelMatrix));
 	lamp1NormalMatrix = glm::mat3(glm::inverseTranspose(view * lamp1ModelMatrix));
+}
+
+void present() {
+	if (presentationMode) {
+		presentationAngle += presentationSpeed * 0.1f;
+		if (presentationAngle >= 360.0f) {
+			presentationAngle -= 360.0f;
+		}
+
+		float x = presentationCenter.x + presentationRadius * cos(glm::radians(presentationAngle));
+		float z = presentationCenter.z + presentationRadius * sin(glm::radians(presentationAngle));
+		glm::vec3 cameraPosition = glm::vec3(x, presentationCenter.y, z);
+		glm::vec3 cameraTarget = presentationCenter;
+
+		myCamera.setPosition(cameraPosition);
+		myCamera.setTarget(cameraTarget);
+		updateCamera();
+	}
 }
 
 void mouseCallback(GLFWwindow* window, double xpos, double ypos) {
@@ -776,6 +806,7 @@ int main(int argc, const char* argv[]) {
 		}
 		renderSceneWithShadows();
 		processMovement();
+		present();
 		updateLightFlicker(currentTime);
 
 		glfwPollEvents();
